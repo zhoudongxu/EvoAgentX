@@ -1,18 +1,31 @@
 # CompactFlow on EvoAgentX
 
-This directory contains an implementation of two complementary workflow
-optimizations:
+## Implementation status
 
-1. a construction plane that retrieves, selects, verifies, and reuses
-   compactness policies while generating an EvoAgentX `WorkFlowGraph`; and
-2. an execution plane that lowers a workflow into exact field dependencies
-   and safely overlaps dependent calls when their required fields are stable.
+CompactFlow is implemented as an optional sidecar package under
+`evoagentx/compactflow`. It adds construction-time workflow compaction,
+guarded opportunistic execution, evidence-based policy evolution, and
+experiment infrastructure without modifying the existing EvoAgentX workflow
+classes.
 
-The implementation also provides paired experiment records, readiness and
-safety diagnostics, deterministic dataset splitting, anonymous manifests, and
-an offline smoke experiment.
+| Component | Delivered behavior | Status |
+| --- | --- | --- |
+| Construction plane | Retrieves and reranks reusable compactness policies, selects a compatible subset, conditions the native EvoAgentX planner, validates the resulting `WorkFlowGraph`, and records fallback and planner traces. | Implemented |
+| Policy evolution | Builds a quality-cost Pareto archive, strictly pairs baseline and candidate evidence by benchmark/split/task/seed, applies deterministic `ADMIT`/`MERGE`/`REJECT` rules, and persists the updated library atomically. | Implemented; candidate distillation model is pluggable |
+| Execution compiler | Lowers a native `WorkFlowGraph` into a guarded function-call relation graph (GFRG), validates JSON Schemas, resolves exact field paths, and synthesizes stable-field readiness guards. | Implemented |
+| Guarded runtime | Executes `Partial`, `Complete`, and `Failure` events, releases consumers only when compiler-validated explicit guard conditions hold, enforces effect/resource constraints, propagates failures, and dispatches each logical call at most once. | Implemented |
+| EvoAgentX integration | Adapts native action-graph and agent-backed nodes while allowing explicit async streaming operations and contracts where early dispatch is required. | Implemented |
+| Experiment infrastructure | Provides deterministic splits, strict paired records, quality/token/latency/structure/safety metrics, sanitized anonymous manifests, trace artifacts, and a network-free smoke experiment. | Implemented |
+| Four-benchmark paper suite | Documents the required MBPP, HotPotQA, MATH, and GAIA comparisons in a validated configuration template. | Protocol scaffold only; formal runner and results are not included |
 
-## What is implemented
+The supplied code therefore supports component and integration validation and
+provides building blocks for custom benchmark integration. It does **not**
+claim reproduction of the
+paper's numerical tables: the paper configuration leaves key model, split,
+budget, seed, and threshold values unresolved, and the repository does not
+contain the missing formal runner or GAIA adapter.
+
+### End-to-end flow
 
 ```text
 task + tool schemas
@@ -43,6 +56,8 @@ policy retrieval -> applicability/utility reranking -> compatibility selection
 The implementation is a sidecar package. Existing EvoAgentX workflow classes
 are not modified, and normal workflows can continue to use the original
 runtime.
+
+### Source map
 
 | Area | Main implementation |
 | --- | --- |
@@ -161,8 +176,8 @@ must fail instead of falling back.
 
 Execution evidence is grouped by benchmark, split, task, and seed, not by
 insertion order. `ParetoArchive` maximizes quality while minimizing token,
-latency, and graph cost. A distilled candidate is evaluated on paired held-out
-executions:
+latency, and graph cost. A distilled candidate is evaluated on paired
+executions from the split that the experiment runner designates as held out:
 
 ```text
 quality condition:  mean(candidate quality - baseline quality) >= -epsilon_Q
@@ -318,7 +333,7 @@ edge = DataDependency(
 | --- | --- |
 | `sequential` | Runs at most one semantically ready call at a time. |
 | `complete` | Runs independent calls concurrently but waits for producer completion on dependent data. |
-| `guarded` | Also releases dependent calls when compiler-proven exact-field guards become true. |
+| `guarded` | Also releases dependent calls when compiler-validated explicit exact-field guard conditions become true. |
 
 The runtime processes `Partial`, `Complete`, and `Failure` events through one
 queue, dispatches each logical call at most once, propagates failures to
@@ -364,7 +379,7 @@ Generated files:
 
 | File | Contents |
 | --- | --- |
-| `manifest.json` | Sanitized config digest, dataset fingerprint/counts, and runtime version |
+| `manifest.json` | Sanitized configuration, configuration digest, dataset fingerprint/counts, and runtime version |
 | `records.jsonl` | One strict benchmark-task-seed-method record per line |
 | `records.csv` | Flat export of the same records |
 | `summary.json` | Paired quality/cost/timing comparison and diagnostics |
