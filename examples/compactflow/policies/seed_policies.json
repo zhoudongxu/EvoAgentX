@@ -1,0 +1,208 @@
+{
+  "schema_version": 1,
+  "policies": [
+    {
+      "id": "linear-chain-fusion",
+      "description": "Fuse adjacent compatible reasoning roles when the intermediate representation has no independent consumer.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "fusion",
+        "pattern": "linear_chain",
+        "constraints": [
+          "preserve all externally consumed outputs",
+          "do not cross effectful tool calls"
+        ]
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "nodes": "decrease",
+        "tokens": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "conflicts_with": [
+        "overlapping-role-fusion"
+      ],
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "fusion",
+          "linear-chain"
+        ],
+        "seed_kind": "expert_template",
+        "exclusive_group": "fusion_strategy"
+      }
+    },
+    {
+      "id": "overlapping-role-fusion",
+      "description": "Use one agent for substantially overlapping roles when their required context and output contract can be combined safely.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "fusion",
+        "pattern": "overlapping_roles",
+        "constraints": [
+          "retain distinct output fields",
+          "retain required validation"
+        ]
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "nodes": "decrease",
+        "tokens": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "conflicts_with": [
+        "linear-chain-fusion"
+      ],
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "fusion",
+          "overlapping-role"
+        ],
+        "seed_kind": "expert_template",
+        "exclusive_group": "fusion_strategy"
+      }
+    },
+    {
+      "id": "unused-output-pruning",
+      "description": "Do not create a node whose outputs are neither workflow sinks nor inputs consumed by another required node.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "planning_constraint",
+        "pattern": "unused_output",
+        "rule": "every generated output must reach a sink"
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "nodes": "decrease",
+        "tokens": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "pruning",
+          "unused-output"
+        ],
+        "seed_kind": "expert_template"
+      }
+    },
+    {
+      "id": "redundant-edge-simplification",
+      "description": "Avoid duplicate or transitively redundant communication edges unless they carry a distinct required field or effect order.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "planning_constraint",
+        "pattern": "redundant_edge",
+        "rule": "emit only field-carrying or effect-order edges"
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "edges": "decrease",
+        "messages": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "pruning",
+          "edge"
+        ],
+        "seed_kind": "expert_template"
+      }
+    },
+    {
+      "id": "stable-consensus-stopping",
+      "description": "Stop repeated critique or voting once the declared consensus criterion is stable; do not schedule fixed extra rounds.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "stopping",
+        "pattern": "stable_consensus",
+        "constraints": [
+          "define the consensus predicate explicitly",
+          "retain the configured maximum-round fallback"
+        ]
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "nodes": "non_increasing",
+        "tokens": "decrease",
+        "latency": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "stopping",
+          "consensus"
+        ],
+        "seed_kind": "expert_template"
+      }
+    },
+    {
+      "id": "routing-simplification",
+      "description": "Prefer one typed deterministic route over an agent router when the dispatch condition is available before execution.",
+      "precondition": {
+        "capabilities": {
+          "typed_workflow": true
+        }
+      },
+      "operation": {
+        "type": "routing",
+        "pattern": "deterministic_route",
+        "constraints": [
+          "retain a conservative fallback branch",
+          "do not hide tool preconditions"
+        ]
+      },
+      "expected_effect": {
+        "quality": "preserve",
+        "nodes": "decrease",
+        "tokens": "decrease",
+        "latency": "decrease"
+      },
+      "utility": 0.5,
+      "confidence": 0.25,
+      "status": "candidate",
+      "version": 1,
+      "metadata": {
+        "tags": [
+          "routing",
+          "deterministic"
+        ],
+        "seed_kind": "expert_template"
+      }
+    }
+  ],
+  "evidence": []
+}

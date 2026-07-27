@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "name": "compactflow-paper-template",
+  "runner": "protocol_template",
+  "template": true,
+  "runnable": false,
+  "offline": false,
+  "network_access": true,
+  "seed": null,
+  "required": [
+    "seed",
+    "model.provider",
+    "model.name",
+    "model.temperature",
+    "model.max_completion_tokens",
+    "evaluation.sample_count_per_benchmark",
+    "evaluation.rollout_budget",
+    "evaluation.repetitions",
+    "evaluation.generation_seeds",
+    "construction.semantic_top_k0",
+    "construction.top_k",
+    "construction.max_policies",
+    "construction.include_candidate_policies",
+    "construction.retrieval_weights.semantic",
+    "construction.retrieval_weights.structural",
+    "construction.retrieval_weights.historical",
+    "construction.quality_tolerance",
+    "construction.minimum_cost_reduction",
+    "construction.merge_similarity_threshold",
+    "construction.cost_weights.tokens",
+    "construction.cost_weights.latency",
+    "construction.cost_weights.graph",
+    "construction.source_fraction",
+    "construction.validation_fraction",
+    "execution.external_call_capacity",
+    "execution.percentage_threshold",
+    "execution.materialization_batch_size",
+    "execution.replay_policy"
+  ],
+  "model": {
+    "provider": null,
+    "name": null,
+    "temperature": null,
+    "max_completion_tokens": null
+  },
+  "datasets": [
+    {
+      "name": "MBPP",
+      "source": "benchmark",
+      "split": null
+    },
+    {
+      "name": "HotPotQA",
+      "source": "benchmark",
+      "split": null
+    },
+    {
+      "name": "MATH",
+      "source": "benchmark",
+      "split": null
+    },
+    {
+      "name": "GAIA",
+      "source": "benchmark",
+      "split": null
+    }
+  ],
+  "methods": {
+    "construction": [
+      "aflow",
+      "evoagentx",
+      "base_planner",
+      "expert_policies",
+      "static_library",
+      "compactflow"
+    ],
+    "execution": [
+      "sequential",
+      "independent_only",
+      "complete_dependency",
+      "percentage_threshold",
+      "guarded"
+    ]
+  },
+  "evaluation": {
+    "sample_count_per_benchmark": null,
+    "rollout_budget": null,
+    "repetitions": null,
+    "generation_seeds": null,
+    "paired": true,
+    "strict_pairs": true
+  },
+  "construction": {
+    "semantic_top_k0": null,
+    "top_k": null,
+    "max_policies": null,
+    "include_candidate_policies": null,
+    "retrieval_weights": {
+      "semantic": null,
+      "structural": null,
+      "historical": null
+    },
+    "quality_tolerance": null,
+    "minimum_cost_reduction": null,
+    "merge_similarity_threshold": null,
+    "cost_weights": {
+      "tokens": null,
+      "latency": null,
+      "graph": null
+    },
+    "source_fraction": null,
+    "validation_fraction": null
+  },
+  "execution": {
+    "external_call_capacity": null,
+    "percentage_threshold": null,
+    "materialization_batch_size": null,
+    "replay_policy": null
+  },
+  "artifacts": {
+    "directory": "outputs/compactflow/paper",
+    "formats": [
+      "json",
+      "jsonl",
+      "csv"
+    ]
+  }
+}

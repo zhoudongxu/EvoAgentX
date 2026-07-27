@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "name": "compactflow-offline-smoke",
+  "runner": "offline_smoke",
+  "template": false,
+  "runnable": true,
+  "offline": true,
+  "network_access": false,
+  "seed": 7,
+  "required": [
+    "model.provider",
+    "model.name",
+    "construction.semantic_top_k0",
+    "construction.top_k",
+    "construction.max_policies",
+    "construction.include_candidate_policies",
+    "execution.external_call_capacity",
+    "evaluation.repetitions"
+  ],
+  "model": {
+    "provider": "mock",
+    "name": "deterministic-scripted-model",
+    "temperature": 0.0,
+    "max_completion_tokens": 256
+  },
+  "datasets": [
+    {
+      "name": "synthetic-compactflow",
+      "source": "synthetic",
+      "split": "test",
+      "task_ids": [
+        "streaming-fanout",
+        "full-result-fallback"
+      ]
+    }
+  ],
+  "methods": {
+    "construction": [
+      "policy_retrieval_smoke"
+    ],
+    "execution": [
+      "complete_dependency",
+      "guarded"
+    ]
+  },
+  "construction": {
+    "semantic_top_k0": 4,
+    "top_k": 3,
+    "max_policies": 2,
+    "include_candidate_policies": true,
+    "retrieval_weights": {
+      "semantic": 0.34,
+      "structural": 0.33,
+      "historical": 0.33
+    },
+    "quality_tolerance": 0.0,
+    "minimum_cost_reduction": 0.0,
+    "merge_similarity_threshold": 0.95,
+    "source_fraction": 0.6,
+    "validation_fraction": 0.2
+  },
+  "execution": {
+    "external_call_capacity": 2
+  },
+  "evaluation": {
+    "repetitions": 1,
+    "paired": true,
+    "strict_pairs": true
+  },
+  "artifacts": {
+    "directory": "outputs/compactflow/smoke",
+    "formats": [
+      "json",
+      "jsonl",
+      "csv"
+    ]
+  }
+}
