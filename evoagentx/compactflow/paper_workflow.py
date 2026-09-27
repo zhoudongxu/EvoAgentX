@@ -22,6 +22,11 @@ def object_schema(properties: dict) -> dict:
 
 
 def validate_spec(spec: dict, public_input: dict, selected_ids: set[str], max_nodes: int = 12) -> None:
+    from jsonschema import Draft202012Validator
+    schema = json.loads((PROMPTS.parent / "schemas/workflow.schema.json").read_text())
+    error = next(iter(Draft202012Validator(schema).iter_errors(spec)), None)
+    if error is not None:
+        raise ValueError(f"workflow schema at {list(error.path)}: {error.message}")
     if set(spec) - {"nodes", "sinks", "applied_policies", "unapplied_policies"}:
         raise ValueError("unknown workflow fields")
     if not isinstance(spec.get("nodes"), list) or not 1 <= len(spec["nodes"]) <= max_nodes:
@@ -136,6 +141,7 @@ def compile_spec(spec: dict, public_input: dict, client, *, seed: int, capacity:
 async def plan_workflow(client, task, policies, config, *, seed: int):
     selected = [p.to_dict() for p in policies]
     data = {"task": task.public_input(), "selected_policies": selected, "max_nodes": config["max_nodes"]}
+    data["workflow_schema"] = json.loads((PROMPTS.parent / "schemas/workflow.schema.json").read_text())
     errors = []
     spec = None
     original_ids = {p.id for p in policies}

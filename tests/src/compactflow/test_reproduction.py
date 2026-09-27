@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from evoagentx.compactflow.compiler import GFRGCompiler
+from evoagentx.compactflow.paper_workflow import validate_spec
 from evoagentx.compactflow.replay import (
     ReplayBundle,
     ReplayMiss,
@@ -82,6 +83,15 @@ def test_no_early_calls_and_incomplete_audits_cannot_claim_zero_percent():
     result = summarize_safety([CallAudit("a", True, assessed=False)])
     assert result["rates"]["aggregate"] is None
     assert result["unassessed_early_calls"] == 1
+
+
+def test_planner_schema_error_has_a_repairable_field_location():
+    spec = {"nodes": [{"id": "answer", "tool": "llm", "instruction": "answer", "inputs": {"q": "$input.question"}, "outputs": ["answer"]}],
+            "sinks": [{"node": "answer"}], "applied_policies": [], "unapplied_policies": []}
+    with pytest.raises(ValueError, match="sinks"):
+        validate_spec(spec, {"question": "test"}, set())
+    spec["sinks"] = ["answer"]
+    validate_spec(spec, {"question": "test"}, set())
 
 
 @pytest.mark.asyncio

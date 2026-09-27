@@ -24,7 +24,12 @@ async def run(config_path: Path, output: Path) -> dict:
     task = BenchmarkTask("integration_fixture", "arithmetic-1", "Calculate 17 + 25. Return only the integer as the final answer.", "42", "arithmetic")
     client = ModelClient(config["model"], token_budget=config["evaluation"]["task_token_budget"])
     seed = config["evaluation"]["generation_seeds"][0]
-    spec, planning = await plan_workflow(client, task, [], config["construction"]["planner"], seed=seed)
+    try:
+        spec, planning = await plan_workflow(client, task, [], config["construction"]["planner"], seed=seed)
+    except Exception as error:
+        (output / "model_requests.json").write_text(json.dumps(client.records, indent=2))
+        (output / "summary.json").write_text(json.dumps({"status": "failed", "stage": "planner", "error": str(error), "tokens": client.accounting()}, indent=2))
+        raise
     bundle = ReplayBundle(task.task_id)
     graph = compile_spec(spec, task.public_input(), client, seed=seed, capacity=config["execution"]["external_call_capacity"], recorder=bundle)
     options = {"sink_ids": spec["sinks"], "call_timeout": config["execution"]["call_timeout_seconds"],

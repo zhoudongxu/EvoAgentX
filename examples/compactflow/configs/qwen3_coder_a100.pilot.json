@@ -757,7 +757,7 @@
       "examples/compactflow/prompts/contract.txt": "8a6da21ef486f8283ab2a54f4869f81d3731be5a497a03c51ba0959d7fc40503",
       "examples/compactflow/prompts/distill.txt": "3cb6c0a726f0e0e3ea62e1560eaf9445ddb39d443d36ded46b2c5dd50e797b64",
       "examples/compactflow/prompts/execute.txt": "d2afb6da5a9f3a4452047fadbd56127175d2c670921791e1ed0e2c414f11a539",
-      "examples/compactflow/prompts/plan.txt": "12aa7183fb8682a758180467bb08b796cbc1e4e4d2026260a588f9871f3afc63",
+      "examples/compactflow/prompts/plan.txt": "bf5cdf815f2eb9f7e9a5caf7fd828f99cc655bd6bb8a9d86c432556db6c1364e",
       "examples/compactflow/prompts/query.txt": "90f6575f941a5094f9ec88b45bfaf4f350e0a53fd7cd57338cb6039267959f9b",
       "examples/compactflow/prompts/select.txt": "1a7e20a7d8f09d9c43df4b56cb52d96d66a43e18fc11c975f769ed26c211cd31",
       "examples/compactflow/schemas/candidate.schema.json": "d49d3e6a4ab51aa2fea14a856e6b7d0dc62991cc71400bbe5dffab9cbd51bfa0",

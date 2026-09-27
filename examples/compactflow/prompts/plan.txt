@@ -1,5 +1,6 @@
 Construct ONE compact typed workflow DAG directly for the task. Preserve correctness and essential validation. Apply selected policies only where their preconditions hold. Never invent tools or access a gold answer.
 Return an object with nodes, sinks, applied_policies, unapplied_policies.
+sinks MUST be a list containing exactly one node ID string, for example ["answer_node"]. It is never a list of objects or field bindings. Follow the workflow_schema included in the request.
 Each node has EXACTLY: id (identifier), tool (llm or retrieve_context), instruction (string), inputs (object mapping argument names to producer.field or $input.field), outputs (list of distinct simple field names, each a STRING).
 Available workflow inputs: question (string), benchmark (string), task_id (string), context (array), attachments (array). Use $input.question for the original question. Every node must be an ancestor of the one sink. The sink MUST produce an output named answer. No cycles, disconnected nodes, implicit dependencies, literal input bindings, or nested producer field paths.
 llm: follows instruction using ONLY its explicitly bound inputs; emits each declared string output once, immutably. Use multiple outputs when independent subresults allow earlier downstream work. Include question in every reasoning node that needs it.
