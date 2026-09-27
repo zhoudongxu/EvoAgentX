@@ -1,0 +1,1 @@
+Rank the supplied candidate policies for directly constructing a compact, valid workflow. Respect applicability conditions and conflicts. Return {"ranking":["id",...],"selected":["id",...],"inapplicable":{"id":"reason"},"conflicts":[["id1","id2","reason"]]}. Select at most max_policies. Use only supplied IDs. Selection cannot override deterministic safety/applicability checks.

@@ -31,6 +31,8 @@ class ExecutionMode(str, Enum):
     SEQUENTIAL = "sequential"
     COMPLETE = "complete"
     GUARDED = "guarded"
+    INDEPENDENT = "independent_only"
+    PERCENTAGE = "percentage_threshold"
 
 
 class CallState(str, Enum):
@@ -389,6 +391,7 @@ class ViolationStats:
     duplicate_dispatch: int = 0
     effect_order: int = 0
     resource_capacity: int = 0
+    unsafe_dispatch: int = 0
 
     @property
     def total(self) -> int:
@@ -397,6 +400,7 @@ class ViolationStats:
             + self.duplicate_dispatch
             + self.effect_order
             + self.resource_capacity
+            + self.unsafe_dispatch
         )
 
     def as_dict(self) -> dict[str, int]:
@@ -405,6 +409,7 @@ class ViolationStats:
             "duplicate_dispatch": self.duplicate_dispatch,
             "effect_order": self.effect_order,
             "resource_capacity": self.resource_capacity,
+            "unsafe_dispatch": self.unsafe_dispatch,
         }
 
     def __getitem__(self, name: str) -> int:
@@ -421,6 +426,8 @@ class ExecutionMetrics:
     started_at: float
     ended_at: float | None = None
     first_output_at: float | None = None
+    output_ready_at: float | None = None
+    first_internal_output_at: float | None = None
     violations: ViolationStats = field(default_factory=ViolationStats)
     peak_resources: dict[str, float] = field(default_factory=dict)
 
@@ -428,7 +435,7 @@ class ExecutionMetrics:
     def latency(self) -> float | None:
         if self.ended_at is None:
             return None
-        return self.ended_at - self.started_at
+        return (self.output_ready_at or self.ended_at) - self.started_at
 
     @property
     def ttfo(self) -> float | None:

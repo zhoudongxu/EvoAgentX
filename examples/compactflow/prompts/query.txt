@@ -1,0 +1,1 @@
+Write a concise structural query for an external compactness-policy library. Describe repeated roles, linear chains, unused outputs, routing, stopping or stream-aware record processing suggested by the task and available typed tools. Do not solve the task. Return {"query":"..."}.

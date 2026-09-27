@@ -28,7 +28,7 @@ CompactFlow 以可选 Sidecar 的形式集成，不替换 EvoAgentX 原有的工
 | --- | --- |
 | `evoagentx/compactflow/` | 构造面、策略库与演化、图编译器、Guarded Runtime、EvoAgentX 适配器、指标和实验工具 |
 | `examples/compactflow/run_experiments.py` | 可执行的离线 Smoke 实验和配置校验 CLI |
-| `examples/compactflow/configs/` | 可运行的 Smoke 配置和不可运行的正式评测协议模板 |
+| `examples/compactflow/configs/` | Smoke 配置、Qwen3-Coder/A100 完整参考配置和原始协议模板 |
 | `examples/compactflow/policies/` | 紧凑性策略种子模板 |
 | `tests/src/compactflow/` | 单元、集成、安全性、指标和产物隐私测试 |
 | `examples/compactflow/README.md` | 完整 API、不变量、配置和实验说明 |
@@ -250,9 +250,11 @@ python examples/compactflow/run_experiments.py smoke \
 - MBPP、HotPotQA、MATH 和 GAIA 端到端编排；
 - AFlow、EvoAgentX 等 Baseline 编排；
 - 在线 source/validation/target 策略演化循环；
-- LLM Token 统计与受控 Replay；
-- independent-only 和 percentage-threshold 调度基线；以及
-- GAIA Benchmark Adapter。
+- 完整的外部 Baseline Adapter 和 GAIA 附件/浏览器工具环境。
+
+已经补入 Qwen3-Coder/A100 参考配置、流式 Token 统计、严格调用回放、内部调度
+对照和本地任务适配器。模型/数据版本、附录覆盖与实现边界见
+[配置说明](examples/compactflow/CONFIGURATION.md)。
 
 论文材料也没有给出 Backbone Model、精确数据划分、样本数、Rollout Budget、
 Seed、选择权重、准入阈值、资源容量和 Replay 配置。因此本仓库不复制示意表格
@@ -262,7 +264,7 @@ Seed、选择权重、准入阈值、资源容量和 Replay 配置。因此本�
 
 - 执行图必须是有限静态 DAG。
 - 每个逻辑调用目前只尝试一次；尚未实现 Retry 感知的输入版本失效和补偿副作用。
-- Provider/Tool Timeout 需要在 Operation 内设置；Scheduler 没有 Per-call Timeout。
+- Runtime 支持显式的单调用和工作流 Timeout。
 - 尚未实现动态的 Per-item 调用实例化。
 - 原生 Agent 节点只返回 Complete；提前重叠需要显式实现 Async Streaming
   Operation 和 `StreamContract`。

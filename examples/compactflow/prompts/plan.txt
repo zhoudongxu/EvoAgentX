@@ -1,0 +1,11 @@
+Construct ONE compact typed workflow DAG directly for the task. Preserve correctness and essential validation. Apply selected policies only where their preconditions hold. Never invent tools or access a gold answer.
+Return an object with nodes, sinks, applied_policies, unapplied_policies.
+Each node has EXACTLY: id (identifier), tool (llm or retrieve_context), instruction (string), inputs (object mapping argument names to producer.field or $input.field), outputs (list of distinct simple field names, each a STRING).
+Available workflow inputs: question (string), benchmark (string), task_id (string), context (array), attachments (array). Use $input.question for the original question. Every node must be an ancestor of the one sink. The sink MUST produce an output named answer. No cycles, disconnected nodes, implicit dependencies, literal input bindings, or nested producer field paths.
+llm: follows instruction using ONLY its explicitly bound inputs; emits each declared string output once, immutably. Use multiple outputs when independent subresults allow earlier downstream work. Include question in every reasoning node that needs it.
+retrieve_context: inputs must be exactly {"context":"$input.context"}; emits one supplied document per output in order, preserving all its content. It does not perform web search. For a context with N documents declare N fields such as doc0...docN-1, then bind each summarizer to its required field(s). Do not request nonexistent records.
+MBPP: the final answer is complete executable Python code defining requested functions, without prose/fences.
+HotpotQA/GAIA: the final answer is only the concise answer, without explanation.
+MATH: the final answer is only the final mathematical expression, optionally boxed.
+applied_policies contains objects {"id":"selected ID","evidence":"specific structural application"}; unapplied_policies records IDs and reasons.
+If repair feedback is provided, fix the reported error within the same node budget.

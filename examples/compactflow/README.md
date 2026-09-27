@@ -388,7 +388,14 @@ Generated files:
 Local smoke timings are expected to vary with the operating system and load.
 They are implementation checks, not benchmark results.
 
-### Paper-protocol scaffold
+### Concrete Qwen3-Coder/A100 reference settings
+
+[CONFIGURATION.md](CONFIGURATION.md) documents the complete reference and pilot
+profiles, six model roles, pinned artifacts, Appendix G table mapping and Eq. (38)
+safety accounting. These profiles specify new reproducibility choices; the full
+four-benchmark evolution/baseline orchestration is still incomplete.
+
+### Original paper-protocol scaffold
 
 `configs/paper_template.json` lists the construction and execution comparisons
 for MBPP, HotPotQA, MATH, and GAIA. It is a protocol scaffold, not a formal
@@ -425,20 +432,19 @@ The formal paired protocol to implement is:
    early-dispatch rate, and all four violation categories; and
 7. freeze the admitted policy library before target-split evaluation.
 
-EvoAgentX already contains benchmark adapters for MBPP, HotPotQA, and MATH.
-This repository does not currently contain a GAIA adapter; add one with the
-same `Benchmark` interface before running the four-benchmark suite.
+Local task adapters and evaluators now exist for MBPP, HotpotQA, MATH and GAIA.
+The GAIA adapter does not provide its missing attachment/browser tool environment.
 
 The current CLI implements only `offline_smoke`. It does not implement AFlow
 or EvoAgentX baseline orchestration, online source/validation/target policy
-evolution, LLM token collection, independent-only scheduling, or the
-percentage-threshold baseline. Those names in the paper template are protocol
-requirements rather than executable methods.
+evolution or the complete baseline comparison. Model token collection, strict
+replay and internal independent/percentage scheduling controls are implemented
+as components; external baseline adapters remain separate work.
 
 ### Reproduction boundary
 
-The supplied paper labels its figures and tables as illustrative placeholders
-and does not resolve the backbone model, exact dataset splits, sample counts,
+Some supplied figure captions say illustrative placeholders, and the supplied
+Appendix G does not resolve the backbone model, exact dataset splits, sample counts,
 rollout budget, seeds, \(K_0\), \(K\), \(k\), score weights, admission
 thresholds, resource capacities, replay policy, or materialization settings.
 Consequently:

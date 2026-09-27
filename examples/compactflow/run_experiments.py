@@ -40,6 +40,7 @@ from evoagentx.compactflow.policy import (
     RetrievalConfig,
     SelectionConfig,
 )
+from evoagentx.compactflow.reproduction_config import ReproductionConfigError
 from evoagentx.compactflow.runtime import CompactFlowRuntime
 from evoagentx.compactflow.schema import (
     GFRG,
@@ -454,6 +455,29 @@ async def smoke(config_path: Path, output: Path | None) -> int:
 
 
 def validate_config(config_path: Path, for_run: bool) -> int:
+    raw = json.loads(config_path.read_text())
+    if raw.get("schema_version") == 2:
+        from evoagentx.compactflow.reproduction_config import (
+            validate_model_export,
+            validate_reproduction_config,
+        )
+        if "profile" not in raw:
+            reference = json.loads((ROOT / "configs/qwen3_coder_a100.reference.json").read_text())
+            validate_reproduction_config(reference, root=ROOT.parents[1])
+            validate_model_export(raw, reference)
+            if for_run:
+                raise ConfigValidationError("Model settings are valid; run serve_model.py --preflight for live verification")
+            print(json.dumps({"status": "valid", "kind": "model_export", "matches_reference": True}))
+            return 0
+        config = validate_reproduction_config(raw, root=ROOT.parents[1])
+        if for_run:
+            raise ConfigValidationError(
+                "Reference protocol is specified; use the paper runner's preflight to verify model, datasets and implemented methods before execution"
+            )
+        print(json.dumps({"status": "valid", "name": config["name"],
+                          "profile": config["profile"], "appendix_tables": list(config["appendix_coverage"]),
+                          "original_paper_hyperparameters_recovered": False}, indent=2))
+        return 0
     config = load_experiment_config(config_path, for_run=for_run)
     print(
         json.dumps(
@@ -502,7 +526,7 @@ def main() -> int:
         if args.command == "smoke":
             return asyncio.run(smoke(args.config, args.output))
         return validate_config(args.config, args.for_run)
-    except ConfigValidationError as error:
+    except (ConfigValidationError, ReproductionConfigError) as error:
         print(
             json.dumps(
                 {"status": "error", "error": str(error)},

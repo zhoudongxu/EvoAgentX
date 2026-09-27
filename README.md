@@ -32,7 +32,7 @@ The following paths contain the implementation introduced for CompactFlow:
 | --- | --- |
 | `evoagentx/compactflow/` | Construction plane, policy library/evolution, graph compiler, guarded runtime, EvoAgentX adapter, metrics, and experiment utilities |
 | `examples/compactflow/run_experiments.py` | Executable offline smoke experiment and configuration validation CLI |
-| `examples/compactflow/configs/` | Runnable smoke configuration and non-runnable formal-evaluation protocol template |
+| `examples/compactflow/configs/` | Smoke configuration, concrete Qwen3-Coder/A100 reference profiles, and original protocol template |
 | `examples/compactflow/policies/` | Seed compactness-policy templates |
 | `tests/src/compactflow/` | Unit, integration, safety, metrics, and artifact-privacy tests |
 | `examples/compactflow/README.md` | Detailed API, invariants, configuration, and experiment documentation |
@@ -337,9 +337,12 @@ formal comparison protocol, but the current CLI does not implement:
 - MBPP, HotPotQA, MATH, and GAIA end-to-end orchestration;
 - AFlow and EvoAgentX baseline orchestration;
 - online source/validation/target policy-evolution loops;
-- LLM token collection and controlled replay;
-- independent-only and percentage-threshold scheduling baselines; or
-- a GAIA benchmark adapter.
+- complete baseline adapters and GAIA attachment/browser tooling.
+
+Concrete Qwen3-Coder/A100 settings, streaming token accounting, strict call replay,
+internal scheduling controls and local task adapters are now available. See
+[the configuration guide](examples/compactflow/CONFIGURATION.md) for pinned
+model/data versions, Appendix G coverage and current execution boundaries.
 
 The supplied paper material also leaves the backbone model, exact splits,
 sample counts, rollout budget, seeds, selection weights, admission thresholds,

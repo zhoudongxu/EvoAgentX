@@ -1,0 +1,12 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"CompactFlow distilled candidate v1",
+  "type":"object","required":["candidate"],"additionalProperties":false,
+  "properties":{"candidate":{"oneOf":[{"type":"null"},{
+    "type":"object","additionalProperties":false,
+    "required":["description","precondition","operation","expected_effect","failure_modes"],
+    "properties":{"description":{"type":"string","minLength":1},"precondition":{"type":"object"},
+      "operation":{"type":"object","required":["type","constraints"],"properties":{"type":{"enum":["fusion","pruning","routing","stopping"]},"constraints":{"type":"array","items":{"type":"string"}}},"additionalProperties":false},
+      "expected_effect":{"type":"object"},"failure_modes":{"type":"array","items":{"type":"string"}}}
+  }]}}
+}

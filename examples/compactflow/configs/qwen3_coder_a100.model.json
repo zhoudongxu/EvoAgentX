@@ -1,0 +1,115 @@
+{
+  "schema_version": 2,
+  "model": {
+    "provider": "local_vllm",
+    "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+    "name": "Qwen3-Coder-30B-A3B-Instruct",
+    "base_url": "http://127.0.0.1:8019/v1",
+    "api_product": "vLLM OpenAI-compatible Chat Completions",
+    "api_key_env": "COMPACTFLOW_API_KEY",
+    "authentication": "optional bearer key from environment; never serialized",
+    "top_p": 0.8,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "context_length": 32768,
+    "components": {
+      "query": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 512
+      },
+      "selector": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 1024
+      },
+      "planner": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.7,
+        "max_tokens": 4096
+      },
+      "distiller": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 2048
+      },
+      "checker": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.0,
+        "max_tokens": 1024
+      },
+      "executor": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.7,
+        "max_tokens": 4096
+      }
+    },
+    "reasoning_mode": "non-thinking",
+    "seed_support": "seed forwarded; GPU/API output reproducibility is not guaranteed",
+    "max_retries": 2,
+    "connect_timeout_seconds": 10,
+    "timeout_seconds": 180,
+    "backoff_seconds": 1.0,
+    "max_backoff_seconds": 8.0,
+    "retryable_status_codes": [
+      429,
+      500,
+      502,
+      503,
+      504
+    ],
+    "retryable_errors": [
+      "connection_error",
+      "timeout_before_first_output"
+    ],
+    "retry_after_partial": "fail_and_invalidate_descendants",
+    "concurrency": 4,
+    "truncation": "reject oversized request; never silently truncate",
+    "tokenizer": {
+      "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+      "accounting": "provider prompt_tokens + completion_tokens; reasoning included in completion if reported",
+      "missing_usage": "mark run non-reportable; do not estimate benchmark tokens"
+    },
+    "config_sha256": "e2c8d8eea39471785cd93379d8b48241ad7dcda299013155dd02526e34a0de62",
+    "tokenizer_config_sha256": "60f6e8cb15c98dd07300a3cc465ea662de245d2095e4245616af21b2324db3fc"
+  },
+  "serving": {
+    "engine": "vllm",
+    "version": "0.26.1rc1.dev416+g2dfb8ba59",
+    "model_repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "model_revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+    "served_model_name": "Qwen3-Coder-30B-A3B-Instruct",
+    "host": "127.0.0.1",
+    "port": 8019,
+    "dtype": "bfloat16",
+    "quantization": "none",
+    "tensor_parallel_size": 1,
+    "pipeline_parallel_size": 1,
+    "gpu_memory_utilization": 0.82,
+    "max_model_len": 32768,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 8192,
+    "enforce_eager": true,
+    "enable_prefix_caching": false,
+    "enable_chunked_prefill": true,
+    "seed": 42,
+    "device_requirement": "one NVIDIA A100 80GB with at least 70 GiB free before startup",
+    "gpu_selection": "explicit CUDA_VISIBLE_DEVICES; never terminate unrelated jobs",
+    "model_path_env": "COMPACTFLOW_MODEL_PATH",
+    "model_path_default": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "installation": "reuse verified A100 environment; package version is an observed development build, not a promised PyPI wheel",
+    "launch_environment": "prepend serving interpreter bin directory to PATH so ninja is available for FlashInfer JIT",
+    "observed_runtime": {
+      "python": "3.11.15",
+      "torch": "2.13.0+cu132",
+      "cuda": "13.2",
+      "transformers": "5.14.1",
+      "tokenizers": "0.22.2",
+      "safetensors": "0.8.0",
+      "huggingface_hub": "1.26.0"
+    }
+  },
+  "source": "extracted from qwen3_coder_a100.reference.json; validator checks equality"
+}

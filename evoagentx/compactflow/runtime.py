@@ -249,11 +249,31 @@ class CompactFlowRuntime:
         graph: GFRG,
         mode: ExecutionMode | str = ExecutionMode.GUARDED,
         resource_capacity: ResourceVector | Mapping[str, float] | None = None,
+        *,
+        sink_ids: tuple[str, ...] | None = None,
+        call_timeout: float | None = None,
+        workflow_timeout: float | None = None,
+        percentage_threshold: float = 0.5,
     ) -> None:
         if not isinstance(graph, GFRG):
             raise TypeError("graph must be a compiled GFRG")
         self.graph = graph
         self.mode = ExecutionMode(mode)
+        outgoing = {d.producer for d in graph.data_dependencies}
+        outgoing.update(d.producer for d in graph.effect_dependencies)
+        self.sink_ids = tuple(sink_ids) if sink_ids is not None else tuple(
+            call.id for call in graph.calls if call.id not in outgoing
+        )
+        if not self.sink_ids or set(self.sink_ids) - set(graph.call_map):
+            raise ValueError("sink_ids must name existing output calls")
+        for timeout in (call_timeout, workflow_timeout):
+            if timeout is not None and (not math.isfinite(timeout) or timeout <= 0):
+                raise ValueError("timeouts must be finite and positive")
+        if not 0 < percentage_threshold <= 1:
+            raise ValueError("percentage_threshold must be in (0, 1]")
+        self.call_timeout = call_timeout
+        self.workflow_timeout = workflow_timeout
+        self.percentage_threshold = percentage_threshold
         if resource_capacity is None:
             self.resource_capacity = graph.resource_capacity
         elif isinstance(resource_capacity, ResourceVector):
@@ -285,8 +305,11 @@ class CompactFlowRuntime:
             inputs=inputs or {},
             resource_capacity=self.resource_capacity,
             expected_arguments=expected_arguments or {},
+            sink_ids=self.sink_ids,
+            call_timeout=self.call_timeout,
+            percentage_threshold=self.percentage_threshold,
         )
-        return await execution.run()
+        return await asyncio.wait_for(execution.run(), self.workflow_timeout)
 
     async def run(
         self,
@@ -313,6 +336,9 @@ class _Execution:
         inputs: Mapping[str, Any],
         resource_capacity: ResourceVector,
         expected_arguments: Mapping[str, Mapping[str, Any]],
+        sink_ids: tuple[str, ...],
+        call_timeout: float | None,
+        percentage_threshold: float,
     ) -> None:
         self.graph = graph
         self.mode = mode
@@ -321,6 +347,14 @@ class _Execution:
         self.inputs = _deepcopy(dict(inputs))
         self.capacity = resource_capacity
         self.expected_arguments = expected_arguments
+        self.sink_ids = sink_ids
+        self.call_timeout = call_timeout
+        self.percentage_threshold = percentage_threshold
+        self.levels: dict[str, int] = {}
+        for call_id in self.order:
+            parents = [d.producer for d in graph.incoming_data(call_id) if d.producer]
+            parents += [d.producer for d in graph.incoming_effects(call_id)]
+            self.levels[call_id] = max((self.levels[p] + 1 for p in parents), default=0)
 
         self.states = {
             call_id: CallState.WAITING for call_id in self.call_map
@@ -448,7 +482,10 @@ class _Execution:
             ):
                 return
 
-            for call_id in self.order:
+            for call_id in sorted(self.order, key=lambda cid: (
+                self.traces[cid].ready_at if self.traces[cid].ready_at is not None else math.inf,
+                self.order.index(cid),
+            )):
                 if self.states[call_id] is not CallState.READY:
                     continue
                 if not self._resources_available(call_id):
@@ -458,6 +495,11 @@ class _Execution:
                     break
 
     def _semantically_ready(self, call_id: str) -> bool:
+        if self.mode is ExecutionMode.INDEPENDENT and any(
+            self.levels[other] < self.levels[call_id] and not state.terminal
+            for other, state in self.states.items()
+        ):
+            return False
         for dependency in self.graph.incoming_data(call_id):
             if not self._data_ready(dependency):
                 return False
@@ -501,6 +543,15 @@ class _Execution:
                 )
                 is not _MISSING
             )
+        if self.mode is ExecutionMode.PERCENTAGE:
+            # Deliberately weaker experimental baseline; it still requires
+            # actual argument materialization and all effect/resource guards.
+            properties = self.call_map[dependency.producer].output_schema.get("properties", {})
+            materialized = self.outputs[dependency.producer]
+            progress = sum(key in materialized for key in properties) / max(1, len(properties))
+            return progress >= self.percentage_threshold and _path_get(
+                materialized, dependency.source_path, _MISSING
+            ) is not _MISSING
         return False
 
     def _effect_ready(self, dependency: EffectDependency) -> bool:
@@ -619,6 +670,13 @@ class _Execution:
             return
         self._reserve_resources_locked(call_id)
         self.dispatch_ledger.add(call_id)
+        if any(
+            d.producer is not None
+            and self.states[d.producer] is not CallState.COMPLETED
+            and not (self.graph.has_guard(d) and d.source_path in self.stable_fields[d.producer])
+            for d in self.graph.incoming_data(call_id)
+        ):
+            self.metrics.violations.unsafe_dispatch += 1
         self.states[call_id] = CallState.RUNNING
         call_trace = self.traces[call_id]
         call_trace.state = CallState.RUNNING
@@ -636,6 +694,14 @@ class _Execution:
         self.tasks[call_id] = task
 
     async def _invoke(
+        self, call: CallSpec, arguments: Mapping[str, Any]
+    ) -> None:
+        try:
+            await asyncio.wait_for(self._invoke_impl(call, arguments), self.call_timeout)
+        except TimeoutError:
+            await self.queue.put(Failure(error=f"call timeout: {call.id}", call_id=call.id))
+
+    async def _invoke_impl(
         self, call: CallSpec, arguments: Mapping[str, Any]
     ) -> None:
         terminal_sent = False
@@ -684,6 +750,7 @@ class _Execution:
         except asyncio.CancelledError:
             # Internal descendant cancellation has already terminalized state
             # and released resources in the sole state-mutating loop.
+            terminal_sent = True
             raise
         except BaseException as error:  # noqa: BLE001 - arbitrary call boundary
             await self.queue.put(Failure(error=error, call_id=call.id))
@@ -745,7 +812,9 @@ class _Execution:
         call_trace = self.traces[call_id]
         if call_trace.first_output_at is None:
             call_trace.first_output_at = timestamp
-        if self.metrics.first_output_at is None:
+        if self.metrics.first_internal_output_at is None:
+            self.metrics.first_internal_output_at = timestamp
+        if call_id in self.sink_ids and self.metrics.first_output_at is None:
             self.metrics.first_output_at = timestamp
 
     def _handle_partial_locked(self, call_id: str, event: Partial) -> None:
@@ -854,6 +923,8 @@ class _Execution:
                 self.observed_effects.add((call_id, effect))
                 self.effect_times[(call_id, effect)] = observed_at
             self.states[call_id] = CallState.COMPLETED
+            if all(self.states[sink] is CallState.COMPLETED for sink in self.sink_ids):
+                self.metrics.output_ready_at = observed_at
             call_trace = self.traces[call_id]
             call_trace.state = CallState.COMPLETED
             call_trace.output = _deepcopy(candidate)
@@ -889,6 +960,7 @@ class _Execution:
                 CallState.WAITING,
                 CallState.READY,
                 CallState.RUNNING,
+                CallState.COMPLETED,
             }:
                 kind = (
                     TraceKind.CANCEL
@@ -899,8 +971,12 @@ class _Execution:
                     kind, descendant, {"reason": reason}
                 )
                 self.states[descendant] = CallState.SKIPPED
+                self.outputs[descendant] = {}
+                if descendant in self.sink_ids:
+                    self.metrics.output_ready_at = None
                 call_trace = self.traces[descendant]
                 call_trace.state = CallState.SKIPPED
+                call_trace.output = {}
                 call_trace.error = reason
                 call_trace.ended_at = observed_at
                 self._release_resources_locked(descendant)
