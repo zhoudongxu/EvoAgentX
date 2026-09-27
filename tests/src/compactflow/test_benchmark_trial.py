@@ -116,6 +116,9 @@ async def test_trial_persists_real_traces_and_keeps_planner_failures_in_denomina
     assert report["attempted"] == 2
     assert report["quality_mean_all_attempts"] == 0.5
     assert report["valid_replay_pairs"] == 1
+    assert report["mean_nodes"] == 1
+    assert report["workflow_size_samples"] == 1
+    assert report["planning_timing_samples"] == 2
     assert (
         report["safety"]["aggregate_rate"] is None
     )  # No early calls cannot establish 0%.

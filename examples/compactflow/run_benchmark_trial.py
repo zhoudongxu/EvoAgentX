@@ -193,6 +193,8 @@ async def run_task(task, config, protocol, directory):
     finally:
         bundle.save(directory / "replay.json")
         report["wall_seconds"] = time.perf_counter() - start
+        if report["stage"] == "planner" and "planning_seconds" not in report:
+            report["planning_seconds"] = time.perf_counter() - planning_start
         report["tokens"] = client.accounting()
         save(directory / "model_requests.json", client.records)
         save(directory / "result.json", report)
@@ -257,14 +259,20 @@ def summarize(records, protocol):
             "tokens_observed": sum(r["tokens"]["total_tokens"] for r in items),
             "token_usage_complete": all(r["tokens"]["usage_complete"] for r in items),
             "mean_planning_seconds": statistics.mean(
-                r.get("planning_seconds", 0) for r in items
-            ),
+                r["planning_seconds"] for r in items if "planning_seconds" in r
+            )
+            if any("planning_seconds" in r for r in items)
+            else None,
+            "planning_timing_samples": sum("planning_seconds" in r for r in items),
             "mean_live_latency_seconds": statistics.mean(
                 r["live_latency_seconds"] for r in items if "live_latency_seconds" in r
             )
             if any("live_latency_seconds" in r for r in items)
             else None,
-            "mean_nodes": statistics.mean(r.get("nodes", 0) for r in items),
+            "mean_nodes": statistics.mean(r["nodes"] for r in items if "nodes" in r)
+            if any("nodes" in r for r in items)
+            else None,
+            "workflow_size_samples": sum("nodes" in r for r in items),
             "valid_replay_pairs": len(pairs),
             "mean_complete_replay_seconds": complete_mean,
             "mean_guarded_replay_seconds": guarded_mean,
