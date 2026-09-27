@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from evoagentx.compactflow.compiler import GFRGCompiler
-from evoagentx.compactflow.paper_workflow import validate_spec
+from evoagentx.compactflow.paper_workflow import compile_spec, validate_spec
 from evoagentx.compactflow.replay import (
     ReplayBundle,
     ReplayMiss,
@@ -146,3 +146,19 @@ async def test_timeout_reports_timeout_without_fake_terminal_event():
     result = await CompactFlowRuntime(graph, call_timeout=0.01).execute()
     assert result.states["slow"] is CallState.FAILED
     assert "call timeout" in result.errors["slow"]
+
+
+@pytest.mark.asyncio
+async def test_explicit_empty_footprint_does_not_inherit_all_workflow_inputs():
+    class FixtureClient:
+        async def stream(self, system, prompt, **kwargs):
+            assert json.loads(prompt)["inputs"] == {}
+            yield '{"field":"answer","value":"42"}\n'
+    spec = {"nodes": [{"id": "answer", "tool": "llm", "instruction": "compute 17+25", "inputs": {}, "outputs": ["answer"]}],
+            "sinks": ["answer"], "applied_policies": [], "unapplied_policies": []}
+    public_input = {"question": "17+25", "context": []}
+    graph = compile_spec(spec, public_input, FixtureClient(), seed=42)
+    result = await CompactFlowRuntime(graph).execute(public_input)
+    assert not result.errors
+    assert result.arguments["answer"] == {}
+    assert result.outputs["answer"] == {"answer": "42"}

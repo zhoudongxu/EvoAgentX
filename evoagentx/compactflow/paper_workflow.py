@@ -133,7 +133,8 @@ def compile_spec(spec: dict, public_input: dict, client, *, seed: int, capacity:
         call = CallSpec(node["id"], target, input_schema=object_schema(properties), output_schema=output_schema,
                         early_safe=True, resources={"external_call": 1},
                         stream_contract=StreamContract(stable_fields=tuple(node["outputs"])),
-                        metadata={"tool": node["tool"], "effect_class": "pure", "footprint_method": "explicit_typed_input_bindings_v1"})
+                        metadata={"tool": node["tool"], "effect_class": "pure", "explicit_input_bindings": True,
+                                  "footprint_method": "explicit_typed_input_bindings_v1"})
         calls.append(recorder.wrap(call) if recorder else call)
     return GFRGCompiler({"external_call": capacity}).compile(calls, dependencies)
 

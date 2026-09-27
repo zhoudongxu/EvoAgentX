@@ -569,11 +569,12 @@ class _Execution:
         call = self.call_map[call_id]
         properties = call.input_schema.get("properties", {})
         arguments: dict[str, Any] = {}
-        if isinstance(properties, Mapping) and properties:
+        explicit_bindings = call.metadata.get("explicit_input_bindings", False)
+        if not explicit_bindings and isinstance(properties, Mapping) and properties:
             for name in properties:
                 if name in self.inputs:
                     arguments[name] = _deepcopy(self.inputs[name])
-        elif not self.graph.incoming_data(call_id):
+        elif not explicit_bindings and not self.graph.incoming_data(call_id):
             arguments.update(_deepcopy(self.inputs))
 
         for dependency in self.graph.incoming_data(call_id):
