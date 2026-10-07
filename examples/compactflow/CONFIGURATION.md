@@ -5,7 +5,7 @@
 
 | Setting | Reference value |
 |---|---|
-| Backbone | Qwen/Qwen3-Coder-30B-A3B-Instruct |
+| Backbone | Qwen/gpt-4o-mini |
 | Revision | b2cff646eb4bb1d68355c01b18ae02e7cf42d120 |
 | Precision | BF16; no quantization |
 | Hardware | Active profiles: main model on GPU 7, one A100 80 GB, TP/PP 1/1; GAIA vision/audio on CPU, FP32, eight threads, shared auxiliary concurrency one |

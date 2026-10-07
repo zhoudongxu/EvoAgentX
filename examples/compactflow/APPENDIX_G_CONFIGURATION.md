@@ -5,14 +5,14 @@
 
 | Setting | Reference value | JSON key(s) |
 |---|---|---|
-| Backbone model | Qwen/Qwen3-Coder-30B-A3B-Instruct; revision b2cff646eb4bb1d68355c01b18ae02e7cf42d120 | `model.repository`<br>`model.revision` |
+| Backbone model | Qwen/gpt-4o-mini; revision b2cff646eb4bb1d68355c01b18ae02e7cf42d120 | `model.repository`<br>`model.revision` |
 | Provider and endpoint | Local vLLM 0.26.1rc1.dev416+g2dfb8ba59; OpenAI-compatible Chat Completions; http://127.0.0.1:8019/v1. No separately versioned hosted API. | `model.api_product`<br>`model.base_url`<br>`serving.version` |
-| Query generation | Qwen3-Coder-30B-A3B-Instruct | `model.components.query` |
-| Policy selection | Qwen3-Coder-30B-A3B-Instruct | `model.components.selector` |
-| Workflow planner | Qwen3-Coder-30B-A3B-Instruct | `model.components.planner` |
-| Policy distillation | Qwen3-Coder-30B-A3B-Instruct | `model.components.distiller` |
-| Semantic/contract checker | Qwen3-Coder-30B-A3B-Instruct; deterministic JSON Schema and graph checks are mandatory | `model.components.checker` |
-| Workflow executors | Qwen3-Coder-30B-A3B-Instruct | `model.components.executor` |
+| Query generation | gpt-4o-mini | `model.components.query` |
+| Policy selection | gpt-4o-mini | `model.components.selector` |
+| Workflow planner | gpt-4o-mini | `model.components.planner` |
+| Policy distillation | gpt-4o-mini | `model.components.distiller` |
+| Semantic/contract checker | gpt-4o-mini; deterministic JSON Schema and graph checks are mandatory | `model.components.checker` |
+| Workflow executors | gpt-4o-mini | `model.components.executor` |
 | Temperature | query 0.2; selector 0.2; planner 0.7; distiller 0.2; checker 0; executor 0.7 | `model.components` |
 | Top-p | All roles: top-p 0.8; top-k 20; repetition penalty 1.05. | `model.top_p`<br>`model.top_k`<br>`model.repetition_penalty` |
 | Maximum output length | query 512; selector 1,024; planner 4,096; distiller 2,048; checker 1,024; executor 4,096 | `model.components` |
@@ -21,7 +21,7 @@
 | Reasoning mode | Non-thinking; provider prompt_tokens + completion_tokens. Include any provider-reported reasoning tokens in completion usage. Missing usage makes token results non-reportable. | `model.reasoning_mode`<br>`model.tokenizer` |
 | Retry policy | The current shared ModelClient sends one HTTP request per logical attempt and does not automatically retry after transport starts, even before output. Unknown usage remains incomplete. Distinct planner repair calls retain their configured budget. Legacy max_retries/backoff fields do not enable transport retries. | `model.max_retries` (legacy)<br>`model.timeout_seconds`<br>`model.connect_timeout_seconds`<br>`runner.failure_protocol` |
 | Prompt version | Six prompts under examples/compactflow/prompts/. SHA-256 for each is in artifacts.source_hashes in the reference JSON. The per-file hashes in the locked profile are authoritative. | `artifacts.source_hashes` |
-| Tokenizer | Qwen/Qwen3-Coder-30B-A3B-Instruct at b2cff646eb4bb1d68355c01b18ae02e7cf42d120; tokenizers 0.22.2; accounting uses provider usage. | `model.tokenizer`<br>`serving.observed_runtime.tokenizers` |
+| Tokenizer | Qwen/gpt-4o-mini at b2cff646eb4bb1d68355c01b18ae02e7cf42d120; tokenizers 0.22.2; accounting uses provider usage. | `model.tokenizer`<br>`serving.observed_runtime.tokenizers` |
 
 ### Table 10: Retrieval encoder and index
 
