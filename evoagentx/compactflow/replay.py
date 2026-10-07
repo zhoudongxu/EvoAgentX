@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import aclosing, nullcontext
 import copy
 import hashlib
 import inspect
@@ -66,35 +67,42 @@ class ReplayBundle:
                 else:
                     value = await asyncio.to_thread(call.target, **arguments)
                 if hasattr(value, "__aiter__"):
-                    async for event in value:
-                        yield event
+                    async with aclosing(value) if hasattr(value, "aclose") else nullcontext():
+                        async for event in value:
+                            yield event
                 else:
                     yield value if isinstance(value, (Partial, Complete, Failure)) else Complete(value)
             terminal = False
             accumulated = {}
             try:
-                async for event in get_events():
-                    if isinstance(event, (Partial, Complete)):
-                        accumulated = _deep_merge(accumulated, event.data)
-                    item = {"sequence": len(events), "at": time.perf_counter() - started,
-                            "kind": type(event).__name__.lower()}
-                    if isinstance(event, Failure):
-                        item["error"] = str(event.error)
-                    else:
-                        item.update(data=copy.deepcopy(dict(event.data)), effects=list(event.effects))
-                        if isinstance(event, Partial):
-                            item["stable_fields"] = list(event.stable_fields)
-                    events.append(item)
-                    if isinstance(event, (Complete, Failure)):
-                        terminal = True
-                    yield event
-                    if terminal:
-                        break
+                async with aclosing(get_events()) as stream:
+                    async for event in stream:
+                        if isinstance(event, (Partial, Complete)):
+                            accumulated = _deep_merge(accumulated, event.data)
+                        item = {"sequence": len(events), "at": time.perf_counter() - started,
+                                "kind": type(event).__name__.lower()}
+                        if isinstance(event, Failure):
+                            item["error"] = str(event.error)
+                        else:
+                            item.update(data=copy.deepcopy(dict(event.data)), effects=list(event.effects))
+                            if isinstance(event, Partial):
+                                item["stable_fields"] = list(event.stable_fields)
+                        events.append(item)
+                        if isinstance(event, (Complete, Failure)):
+                            terminal = True
+                        yield event
+                        if terminal:
+                            break
                 if not terminal:
                     event = Complete(accumulated)
                     events.append({"sequence": len(events), "at": time.perf_counter() - started,
                                    "kind": "complete", "data": accumulated, "effects": []})
                     yield event
+            except asyncio.CancelledError:
+                if not terminal:
+                    events.append({"sequence": len(events), "at": time.perf_counter() - started,
+                                   "kind": "failure", "error": "call cancelled or timed out"})
+                raise
             except Exception as error:  # noqa: BLE001 - arbitrary tool boundary
                 events.append({"sequence": len(events), "at": time.perf_counter() - started,
                                "kind": "failure", "error": f"{type(error).__name__}: {error}"})
@@ -198,13 +206,20 @@ def graph_to_dict(graph, sink_ids: list[str] | None = None) -> dict:
 
 
 def graph_from_replay(value: dict, bundle: ReplayBundle, *, capacity: dict | None = None,
-                      time_scale: float = 1.0, batch_size: int = 1):
+                      time_scale: float = 1.0, batch_size: int = 1,
+                      compilation_metrics: dict[str, float] | None = None):
     calls = []
     for item in value["calls"]:
         item = copy.deepcopy(item)
         contract = item.pop("stream_contract")
         calls.append(CallSpec(**item, target=bundle.bind(item["id"], time_scale=time_scale, batch_size=batch_size),
                               stream_contract=StreamContract(**contract) if contract else None))
-    return GFRGCompiler(capacity if capacity is not None else value["resource_capacity"]).compile(
-        calls, [DataDependency(**item) for item in value["data_dependencies"]],
-        [EffectDependency(**item) for item in value["effect_dependencies"]])
+    data = [DataDependency(**item) for item in value["data_dependencies"]]
+    effects = [EffectDependency(**item) for item in value["effect_dependencies"]]
+    resources = capacity if capacity is not None else value["resource_capacity"]
+    # Bindings and deserialization belong to replay setup, not static analysis.
+    started = time.perf_counter() if compilation_metrics is not None else None
+    graph = GFRGCompiler(resources).compile(calls, data, effects)
+    if compilation_metrics is not None:
+        compilation_metrics["static_analysis"] = time.perf_counter() - started
+    return graph

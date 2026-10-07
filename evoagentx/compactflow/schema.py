@@ -430,6 +430,8 @@ class ExecutionMetrics:
     first_internal_output_at: float | None = None
     violations: ViolationStats = field(default_factory=ViolationStats)
     peak_resources: dict[str, float] = field(default_factory=dict)
+    control_seconds: dict[str, float] = field(default_factory=dict)
+    control_profile_version: str | None = None
 
     @property
     def latency(self) -> float | None:

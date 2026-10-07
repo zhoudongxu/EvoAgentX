@@ -350,6 +350,10 @@ class CompactnessPolicy:
             status=PolicyStatus(data.get("status", PolicyStatus.CANDIDATE.value)),
             version=int(data.get("version", 1)),
             metadata=dict(data.get("metadata", {})),
-            created_at=str(data.get("created_at", _utc_now())),
-            updated_at=str(data.get("updated_at", _utc_now())),
+            # Released seed policies from schema v1 predate timestamp fields.
+            # Use a stable epoch marker when those fields are absent so loading
+            # the same immutable library in a later process has the same digest
+            # and can safely pass the evolution runner's resume lock.
+            created_at=str(data.get("created_at", "1970-01-01T00:00:00+00:00")),
+            updated_at=str(data.get("updated_at", "1970-01-01T00:00:00+00:00")),
         )

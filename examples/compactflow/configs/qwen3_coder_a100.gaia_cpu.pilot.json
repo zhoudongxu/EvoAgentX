@@ -1,0 +1,1064 @@
+{
+  "schema_version": 2,
+  "name": "compactflow-qwen3-coder-a100-pilot",
+  "profile": "pilot",
+  "configuration_status": "fully_specified_reference_protocol",
+  "paper_replication_claim": false,
+  "paper": {
+    "title": "CompactFlow: Opportunistic Execution and Self-Evolving Policies for Efficient Agentic Workflows",
+    "pages": 20,
+    "pdf_sha256": "d2db4543b791910a8e78cd68129844ebb3194daee589cfe7b07c3d9ab47a7659",
+    "configuration_location": "Appendix G Tables 9-25",
+    "original_numeric_settings": "TBD in supplied PDF; these defaults are new reproducibility choices"
+  },
+  "model": {
+    "provider": "local_vllm",
+    "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+    "name": "Qwen3-Coder-30B-A3B-Instruct",
+    "base_url": "http://127.0.0.1:8019/v1",
+    "api_product": "vLLM OpenAI-compatible Chat Completions",
+    "api_key_env": "COMPACTFLOW_API_KEY",
+    "authentication": "optional bearer key from environment; never serialized",
+    "top_p": 0.8,
+    "top_k": 20,
+    "repetition_penalty": 1.05,
+    "context_length": 32768,
+    "components": {
+      "query": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 512
+      },
+      "selector": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 1024
+      },
+      "planner": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.7,
+        "max_tokens": 4096
+      },
+      "distiller": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.2,
+        "max_tokens": 2048
+      },
+      "checker": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.0,
+        "max_tokens": 1024
+      },
+      "executor": {
+        "model": "Qwen3-Coder-30B-A3B-Instruct",
+        "temperature": 0.7,
+        "max_tokens": 4096
+      }
+    },
+    "reasoning_mode": "non-thinking",
+    "seed_support": "seed forwarded; GPU/API output reproducibility is not guaranteed",
+    "max_retries": 2,
+    "connect_timeout_seconds": 10,
+    "timeout_seconds": 180,
+    "backoff_seconds": 1.0,
+    "max_backoff_seconds": 8.0,
+    "retryable_status_codes": [
+      429,
+      500,
+      502,
+      503,
+      504
+    ],
+    "retryable_errors": [
+      "connection_error",
+      "timeout_before_first_output"
+    ],
+    "retry_after_partial": "fail_and_invalidate_descendants",
+    "concurrency": 4,
+    "truncation": "reject oversized request; never silently truncate",
+    "tokenizer": {
+      "repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+      "accounting": "provider prompt_tokens + completion_tokens; reasoning included in completion if reported",
+      "missing_usage": "mark run non-reportable; do not estimate benchmark tokens"
+    },
+    "config_sha256": "e2c8d8eea39471785cd93379d8b48241ad7dcda299013155dd02526e34a0de62",
+    "tokenizer_config_sha256": "60f6e8cb15c98dd07300a3cc465ea662de245d2095e4245616af21b2324db3fc",
+    "typed_output_constraints": true
+  },
+  "serving": {
+    "engine": "vllm",
+    "version": "0.26.1rc1.dev416+g2dfb8ba59",
+    "model_repository": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "model_revision": "b2cff646eb4bb1d68355c01b18ae02e7cf42d120",
+    "served_model_name": "Qwen3-Coder-30B-A3B-Instruct",
+    "host": "127.0.0.1",
+    "port": 8019,
+    "dtype": "bfloat16",
+    "quantization": "none",
+    "tensor_parallel_size": 1,
+    "pipeline_parallel_size": 1,
+    "gpu_memory_utilization": 0.82,
+    "max_model_len": 32768,
+    "max_num_seqs": 4,
+    "max_num_batched_tokens": 8192,
+    "enforce_eager": true,
+    "enable_prefix_caching": false,
+    "enable_chunked_prefill": true,
+    "seed": 42,
+    "device_requirement": "one NVIDIA A100 80GB with at least 70 GiB free before startup",
+    "gpu_selection": "explicit CUDA_VISIBLE_DEVICES; never terminate unrelated jobs",
+    "model_path_env": "COMPACTFLOW_MODEL_PATH",
+    "model_path_default": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "installation": "reuse verified A100 environment; package version is an observed development build, not a promised PyPI wheel",
+    "launch_environment": "prepend serving interpreter bin directory to PATH so ninja is available for FlashInfer JIT",
+    "observed_runtime": {
+      "python": "3.11.15",
+      "torch": "2.13.0+cu132",
+      "cuda": "13.2",
+      "transformers": "5.14.1",
+      "tokenizers": "0.22.2",
+      "safetensors": "0.8.0",
+      "huggingface_hub": "1.26.0"
+    }
+  },
+  "encoder": {
+    "backend": "sentence_transformers",
+    "repository": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "1110a243fdf4706b3f48f1d95db1a4f5529b4d41",
+    "dimension": 384,
+    "device": "cpu",
+    "normalize_embeddings": true,
+    "similarity": "cosine",
+    "index": "exact_brute_force",
+    "index_update": "immediate_after_verified_admission",
+    "shared_deduplication_index": true,
+    "policy_template": "description + operation.type + metadata.tags (CompactnessPolicy.retrieval_text)",
+    "query_template": "examples/compactflow/prompts/query.txt",
+    "cache": "keyed by encoder revision + exact text",
+    "fallback": "fail; no silent hash-encoder substitution"
+  },
+  "datasets": [
+    {
+      "name": "MBPP",
+      "repository": "google-research-datasets/mbpp",
+      "revision": "4bb6404fdc6cacfda99d4ac4205087b89d32030c",
+      "configurations": [
+        "sanitized"
+      ],
+      "original_splits": [
+        "test"
+      ],
+      "quality_metric": "pass@1",
+      "evaluator": "evoagentx.compactflow.benchmarks.evaluate_mbpp",
+      "sample_count": 15,
+      "gated": false,
+      "all_levels": true
+    },
+    {
+      "name": "HotpotQA",
+      "repository": "hotpotqa/hotpot_qa",
+      "revision": "1908d6afbbead072334abe2965f91bd2709910ab",
+      "configurations": [
+        "distractor"
+      ],
+      "original_splits": [
+        "validation"
+      ],
+      "quality_metric": "answer_f1",
+      "secondary_metrics": [
+        "exact_match"
+      ],
+      "evaluator": "evoagentx.compactflow.benchmarks.hotpot_score",
+      "sample_count": 15,
+      "gated": false,
+      "corpus": "dataset-provided distractor context at pinned revision",
+      "retriever": "ordered supplied records; no external corpus"
+    },
+    {
+      "name": "MATH",
+      "repository": "EleutherAI/hendrycks_math",
+      "revision": "21a5633873b6a120296cce3e2df9d5550074f4a3",
+      "configurations": [
+        "algebra",
+        "counting_and_probability",
+        "geometry",
+        "intermediate_algebra",
+        "number_theory",
+        "prealgebra",
+        "precalculus"
+      ],
+      "original_splits": [
+        "test"
+      ],
+      "quality_metric": "normalized_exact_match",
+      "evaluator": "evoagentx.compactflow.benchmarks.normalize_math",
+      "sample_count": 15,
+      "gated": false,
+      "levels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "stratify_by": [
+        "type",
+        "level"
+      ]
+    },
+    {
+      "name": "GAIA",
+      "repository": "gaia-benchmark/GAIA",
+      "revision": "682dd723ee1e1697e00360edccf2366dc8418dd9",
+      "configurations": [
+        "2023_all"
+      ],
+      "original_splits": [
+        "validation"
+      ],
+      "quality_metric": "task_accuracy",
+      "evaluator": "evoagentx.compactflow.benchmarks.gaia_score",
+      "sample_count": 15,
+      "gated": true,
+      "levels": [
+        1,
+        2,
+        3
+      ],
+      "attachments": "require all task attachments with content hashes",
+      "web_protocol": "capture immutable per-task web/tool evidence snapshot before controlled replay",
+      "missing_assets": "block task and mark cohort incomplete; never silently filter tasks",
+      "access_token_env": "HF_TOKEN"
+    }
+  ],
+  "partition": {
+    "source_fraction": 0.6,
+    "validation_fraction": 0.2,
+    "target_fraction": 0.2,
+    "seed": 42,
+    "sample_seed": 43,
+    "sample_selection": "hash-sort task IDs within benchmark/category strata; freeze manifest before any model call",
+    "family_definition": "provided family_id preferred; otherwise normalized question template replacing numeric literals; fallback does not prove semantic/entity disjointness",
+    "leakage_prevention": "union provided/fallback families, normalized prompts, numeric templates and supplied entity/template leakage_keys within each benchmark",
+    "group_assignment": "deterministic exact whole-family bin packing jointly with per-benchmark validation folds; infeasible benchmarks are incomplete",
+    "nominal_counts_per_benchmark": {
+      "source": 9,
+      "validation": 3,
+      "target": 3
+    },
+    "actual_counts": "written to immutable sample_manifest; fail a protocol if required cohort cannot be formed",
+    "target_library": "frozen; no retrieval-statistic, distillation, verification or merge updates from target tasks",
+    "protocol_interpretation": "source/validation/target are internal disjoint folds of the specified labeled benchmark pool, not the original provider train/dev/test split"
+  },
+  "evaluation": {
+    "generation_seeds": [
+      42
+    ],
+    "runtime_seeds": [
+      31415,
+      31416
+    ],
+    "rollout_budget": 1,
+    "task_token_budget": 65536,
+    "benchmark_seed_search_token_budget": 200000,
+    "repetitions": 2,
+    "warmups": 0,
+    "paired": true,
+    "strict_pairs": true,
+    "failures": "retain in denominator; quality=0 for model/contract failures; infra failures block publication",
+    "bootstrap_resamples": 2000,
+    "bootstrap_seed": 2718,
+    "confidence_level": 0.95,
+    "bootstrap_unit": "task family, keeping methods and seeds paired"
+  },
+  "study_allocation": {
+    "pilot": {
+      "target_tasks_per_benchmark": 3,
+      "generation_seeds": [
+        42
+      ],
+      "methods": [
+        "aflow",
+        "evoagentx",
+        "base_planner",
+        "expert_policies",
+        "static_library",
+        "compactflow"
+      ],
+      "claim": "integration validation only; not full diagnostic study"
+    }
+  },
+  "construction": {
+    "semantic_top_k0": 20,
+    "top_k": 5,
+    "max_policies": 3,
+    "retrieval_weights": {
+      "semantic": 0.55,
+      "structural": 0.25,
+      "historical": 0.1,
+      "confidence": 0.1
+    },
+    "retrieval_score": "(0.55*cosine + 0.25*applicability + 0.10*utility + 0.10*confidence) / sum(weights)",
+    "minimum_semantic_score": 0.15,
+    "minimum_applicability": 1.0,
+    "minimum_selection_score": 0.25,
+    "compatibility": "no conflicts_with, no shared exclusive_group; all structured preconditions must hold; model may remove/reorder but cannot bypass checks",
+    "tie_breaking": "descending total score then ascending policy ID",
+    "include_candidates_source": true,
+    "include_candidates_target": false,
+    "quality_tolerance": 0.0,
+    "minimum_cost_reduction": 0.05,
+    "merge_similarity_threshold": 0.9,
+    "minimum_candidate_valid_rate": 1.0,
+    "cost_weights": {
+      "tokens": 0.5,
+      "latency": 0.25,
+      "graph": 0.25
+    },
+    "normalization_floor": 1e-09,
+    "aggregate_cost": "weighted mean of per-pair relative reductions; graph cost = nodes + edges",
+    "other_cost_tolerance": 0.05,
+    "motif_similarity_threshold": 0.9,
+    "admission_order": "verify_then_merge",
+    "require_matching_pair_keys": true,
+    "require_valid_baseline": true,
+    "heldout_tasks_per_candidate": 3,
+    "heldout_seeds": [
+      101
+    ],
+    "distillation": {
+      "max_candidates_per_task": 1,
+      "max_candidates_per_round": 1,
+      "rounds": 1,
+      "source_tasks_per_round": 2,
+      "eligibility": "valid, zero contract violations, quality >= paired base, weighted cost reduction >= 0.05, source Pareto frontier",
+      "reference": "same-task/seed no-policy planner under complete runtime",
+      "minimum_contract_validity": 1.0,
+      "prompt": "examples/compactflow/prompts/distill.txt",
+      "schema": "examples/compactflow/schemas/candidate.schema.json"
+    },
+    "planner": {
+      "max_nodes": 12,
+      "max_repairs": 2,
+      "fallback": "base_planner",
+      "policy_removal": "drop all after bounded conditioned repairs; one bounded base-planner attempt",
+      "checks": [
+        "JSON grammar",
+        "unique IDs",
+        "acyclic data/effect graph",
+        "all nodes reach declared sink",
+        "typed field bindings",
+        "registered tools",
+        "selected-policy IDs",
+        "structured preconditions"
+      ],
+      "output_schema": "examples/compactflow/schemas/workflow.schema.json",
+      "prompt": "examples/compactflow/prompts/plan.txt",
+      "typed_binding_guidance": true
+    },
+    "statistics": {
+      "utility_initial": 0.5,
+      "confidence_initial": 0.25,
+      "utility_update": "mean(clip(weighted_paired_cost_reduction,0,1)) over all unique paired held-out observations",
+      "confidence_update": "Wilson lower bound for quality-and-cost-success proportion",
+      "wilson_z": 1.96,
+      "success_rule": "valid and delta_quality >= -quality_tolerance and weighted_cost_reduction >= minimum_cost_reduction",
+      "target_updates": false,
+      "duplicate_pair_handling": "deduplicate by candidate_version,benchmark,task_id,seed"
+    },
+    "library": {
+      "initial_path": "examples/compactflow/policies/seed_policies.json",
+      "initial_status": "candidate",
+      "capacity": 256,
+      "expiry": "none; retain evidence indefinitely",
+      "eviction": "lowest confidence, then utility, then oldest update round, then policy ID",
+      "negative_evidence": "persist every rejected paired outcome; excluded from default target retrieval",
+      "versioning": "stable policy ID; increment on merge; preserve original operation/precondition; union evidence IDs; preserve parent links",
+      "merge": "keep verified rule semantics; union positive/negative evidence; recompute utility/confidence from deduplicated pairs",
+      "bootstrap_tasks": 2,
+      "static_snapshot": "after bootstrap, before 5 evolution rounds",
+      "expert_snapshot": "exact initial hand-written templates; not labeled empirically verified",
+      "target_frozen": true,
+      "snapshots": [
+        "initial",
+        "bootstrap",
+        "static",
+        "expert",
+        "each_round",
+        "final"
+      ]
+    },
+    "validation_folds": 1
+  },
+  "execution": {
+    "methods": [
+      "sequential",
+      "independent_only",
+      "complete_dependency",
+      "percentage_threshold",
+      "guarded"
+    ],
+    "method_definitions": {
+      "sequential": "one semantically ready call at a time; complete barriers",
+      "independent_only": "in-house topological-level barriers; independent calls in same level run concurrently; NOT the external LLMCompiler implementation",
+      "complete_dependency": "in-house event-driven complete-result barriers with effects/resources; NOT the external LLMOrch implementation",
+      "percentage_threshold": "early only when required values exist and materialized top-level schema-field fraction >= threshold; exact stability intentionally omitted; effects/resources retained",
+      "guarded": "all exact fields stable, monotone producer, cancellable early-safe consumer, effect/resource guards"
+    },
+    "external_call_capacity": 4,
+    "resource_capacity": {
+      "external_call": 4
+    },
+    "resource_demands": {
+      "llm": {
+        "external_call": 1
+      },
+      "retrieve_context": {
+        "external_call": 1
+      }
+    },
+    "percentage_threshold": 0.5,
+    "percentage_denominator": "number of declared top-level output properties; numerator counts present properties",
+    "materialization_batch_size": 1,
+    "queue_policy": "FIFO by first-ready timestamp; tie by topological order",
+    "fairness": "finite DAG + FIFO fit scan; no unbounded dynamic spawning",
+    "call_timeout_seconds": 180,
+    "workflow_timeout_seconds": 600,
+    "max_runtime_attempts": 1,
+    "scheduler_retry_backoff_seconds": 0,
+    "failure_recovery": "fail call, cancel/invalidate all dependent descendants including completed speculative results; return failed task; do not reissue externally visible effects",
+    "effects": {
+      "classes": [
+        "pure",
+        "idempotent",
+        "compensable",
+        "non_commuting"
+      ],
+      "default": "non_commuting unless registered otherwise",
+      "early_dispatch_default": "registered early-safe consumers only; GAIA exact bindings plus task-asset completion barriers and resource guards",
+      "ordering": "explicit effect-dependency edges; completion barrier unless partial-safe declared",
+      "compensation": "disabled in reference profile; compensable calls retain completion barriers",
+      "gaia_contract_registry": "evoagentx/compactflow/gaia_contracts.py:CONTRACTS"
+    },
+    "stream": {
+      "format": "NDJSON immutable named fields; Partial/Complete/Failure events",
+      "sequence": "consecutive integers per call; starts at 0",
+      "clock": "monotonic relative seconds",
+      "duplicates": "identical event ID and payload ignored by materializer; mismatching duplicate is contract failure",
+      "out_of_order": "reject; transport adapter must order before materialization",
+      "mutable_fields": "never qualify as stable",
+      "llm_stability": "emit one complete JSON string field at newline; reject overwrite; raw token prefixes are never stable values",
+      "dynamic_per_item": "reference profile uses bounded declared item instances from task schema; dynamic graph mutation disabled",
+      "input_versions": "one attempt per logical call; failed producer invalidates all consumed versions; retry disabled",
+      "gaia_stability": "completed independent observation units only; gaia_agent final answer is complete-only; no provisional vision/audio/agent prefixes"
+    },
+    "sweeps": {
+      "external_call_capacity": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "materialization_batch_size": [
+        1,
+        2,
+        4,
+        8,
+        16
+      ],
+      "percentage_threshold": [
+        0.25,
+        0.5,
+        0.75
+      ]
+    },
+    "replay": {
+      "coverage": "100% of workflow model/tool calls in execution comparison; planner excluded from fixed-graph timing",
+      "key": "sha256(canonical JSON {workflow_id,call_id,arguments}); sorted keys; UTF-8; finite JSON only",
+      "miss": "fail; never nearest-match or live fallback",
+      "time_scale": 1.0,
+      "preserve_inter_chunk_delays": true,
+      "warmup_repetitions": 0,
+      "timed_repetitions": 2,
+      "method_order": "seeded permutation for each workflow and repetition",
+      "prefix_cache": false,
+      "cache_state": "bundle preloaded before timing; HTTP/model caches excluded from replay",
+      "network_state": "recorded call delays replayed; no network calls during timed execution"
+    }
+  },
+  "baselines": {
+    "shared": {
+      "model_ref": "model",
+      "decoding_ref": "model.components",
+      "runtime": "complete_dependency",
+      "max_nodes": 12,
+      "task_total_token_budget": 65536,
+      "rollouts_per_task": 1,
+      "search_candidates_per_benchmark_seed": 1,
+      "heldout_tasks_per_candidate": 3,
+      "heldout_seeds": [
+        101
+      ],
+      "target_ground_truth": "never available to planner/search; scoring only",
+      "budget_accounting": "include search separately and amortized over target tasks; no hidden free optimization"
+    },
+    "aflow": {
+      "source": "https://github.com/geekan/MetaGPT",
+      "commit": "11cdf466d042aece04fc6cfd13b28e1a70341b1f",
+      "implementation": "metagpt/ext/aflow",
+      "max_rounds": 1,
+      "population_sample": 4,
+      "candidates_per_round": 1,
+      "validation_rounds": 1,
+      "test_rounds": 1,
+      "check_convergence": false,
+      "stop": "one candidate or offline token budget; pilot only",
+      "integration_status": "runtime_probe",
+      "canonical_exporter": "evoagentx.compactflow.baseline_workflows:export_aflow",
+      "failure_policy": "coverage_incomplete",
+      "adapter_path": "evoagentx.compactflow.baseline_native:AFlowAdapter",
+      "method_seed_ref": "evaluation.generation_seeds",
+      "selection": "all frozen validation tasks; construction.heldout_seeds",
+      "operators_by_benchmark": {
+        "MBPP": [
+          "Custom",
+          "CustomCodeGenerate",
+          "ScEnsemble"
+        ],
+        "HotpotQA": [
+          "Custom",
+          "AnswerGenerate",
+          "QAScEnsemble"
+        ],
+        "MATH": [
+          "Custom",
+          "AnswerGenerate",
+          "ScEnsemble"
+        ],
+        "GAIA": [
+          "GAIAToolAgent",
+          "Custom",
+          "AnswerGenerate",
+          "QAScEnsemble"
+        ]
+      },
+      "local_implementation": "evoagentx.optimizers.aflow_optimizer.AFlowOptimizer",
+      "canonical_boundary": "explicit awaited operators and fixed asyncio.gather; dynamic Python and tool execution rejected"
+    },
+    "a2flow": {
+      "source": "https://github.com/pandawei-ele/A2FLOW",
+      "commit": "8e046369bfe46017a41b126fb36298ba4dba6af6",
+      "max_rounds": 20,
+      "population_sample": 4,
+      "candidates_per_round": 1,
+      "validation_rounds": 3,
+      "operator_memory_capacity": 32,
+      "abstraction_refresh_rounds": 5,
+      "stop": "20 candidates or global token budget",
+      "integration_status": "runtime_probe",
+      "hyperparameter_provenance": "proposed matched-budget reference preset; not recovered A2Flow author settings",
+      "adapter_path": "evoagentx.compactflow.baseline_native:A2FlowAdapter",
+      "canonical_exporter": "evoagentx.compactflow.baseline_workflows:export_aflow"
+    },
+    "evoagentx": {
+      "source": "https://github.com/EvoAgentX/EvoAgentX",
+      "commit": "d77fd6b9a3e76c8dd83bebe3374c53a3f5d16f54",
+      "local_base_commit": "5bc8d72f035acbe88f93a8ac3bd009900606a96c",
+      "optimizer": "SEW",
+      "max_iterations": 1,
+      "candidates_per_iteration": 1,
+      "validation_rounds": 1,
+      "stop": "one candidate or offline token budget; pilot only",
+      "integration_status": "runtime_probe",
+      "canonical_exporter": "evoagentx.compactflow.baseline_native:export_sew",
+      "failure_policy": "coverage_incomplete",
+      "adapter_path": "evoagentx.compactflow.baseline_native:EvoAgentXAdapter",
+      "method_seed_ref": "evaluation.generation_seeds",
+      "selection": "all frozen validation tasks; construction.heldout_seeds",
+      "representation": "yaml"
+    },
+    "base_planner": {
+      "policies": [],
+      "evolution": false,
+      "planner_ref": "construction.planner"
+    },
+    "expert_policies": {
+      "snapshot_ref": "construction.library.initial_path",
+      "retrieval": false,
+      "evolution": false,
+      "selection": "deterministic applicability + compatibility, at most k"
+    },
+    "static_library": {
+      "snapshot_ref": "construction.library.static_snapshot",
+      "retrieval": true,
+      "evolution": false,
+      "snapshot_hash": "generated and frozen before target evaluation"
+    },
+    "compactflow": {
+      "retrieval": true,
+      "evolution": true,
+      "config_ref": "construction"
+    },
+    "external_execution": {
+      "llmcompiler": {
+        "source": "https://github.com/SqueezeAILab/LLMCompiler",
+        "commit": "a00c9d35507507da70e8c637eee64efc8c1857ae",
+        "max_concurrency": 4,
+        "integration_status": "runtime_probe",
+        "adapter_path": "evoagentx.compactflow.execution_baselines:replay_llmcompiler",
+        "scope": "fixed workflow execution only; official TaskFetchingUnit; shared typed call boundary",
+        "upstream_lock": "evoagentx/compactflow/_vendor/llmcompiler/UPSTREAM.json"
+      },
+      "llmorch": {
+        "source": "https://arxiv.org/abs/2504.14872",
+        "implementation": "not located in author-linked source during this session",
+        "integration_status": "author_implementation_unavailable",
+        "surrogate_label": "complete_dependency_reference"
+      }
+    },
+    "reporting": "Do not label in-house scheduling controls as external baseline reproductions; unavailable methods remain explicitly absent."
+  },
+  "ablations": {
+    "construction": {
+      "without_structural_match": {
+        "structural_weight": 0.0,
+        "renormalize_remaining_weights": true
+      },
+      "without_historical_utility": {
+        "historical_weight": 0.0,
+        "confidence_weight": 0.0,
+        "renormalize_remaining_weights": true
+      },
+      "without_policy_selection": {
+        "selection": "top-k applicable candidates; compiler/planner safety checks retained"
+      },
+      "static_library": {
+        "evolution": false
+      },
+      "without_heldout_verification": {
+        "admission": "static contract check only; source-only experimental library; never overwrite verified library"
+      }
+    },
+    "execution": {
+      "without_partial": {
+        "mode": "complete_dependency"
+      },
+      "coarse_footprint": {
+        "guard": "wait for whole producer output"
+      },
+      "without_effect_guard": {
+        "allowed_data": "pure recorded calls only; never live effects"
+      },
+      "without_resource_guard": {
+        "allowed_data": "offline replay only; never live overload"
+      }
+    },
+    "quality_tolerance_sweep": [
+      0.0,
+      0.005,
+      0.01,
+      0.02
+    ],
+    "retrieval_k0_sweep": [
+      10,
+      20,
+      40
+    ],
+    "selected_k_sweep": [
+      1,
+      3,
+      5
+    ]
+  },
+  "metrics": {
+    "quality_units": "fraction [0,1] internally; multiply deltas by 100 for percentage points",
+    "construction_runtime": "complete_dependency",
+    "token_scope": [
+      "query",
+      "selector",
+      "planner",
+      "repair",
+      "fallback",
+      "executor",
+      "distiller",
+      "checker",
+      "verification",
+      "retries_with_usage"
+    ],
+    "token_reporting": "per-task construction+execution and separately total offline evolution; amortized total includes evolution/target_task_count",
+    "graph_cost": "nodes + unique directed edges",
+    "topology_instability": "mean normalized labeled graph edit distance over same-task distinct generation seeds; report bounded-search timeouts separately",
+    "e2e_start": "task submission to fixed-graph runtime; construction time logged separately",
+    "e2e_end": "last declared sink complete output",
+    "ttfo": "first externally visible declared sink output; never first internal tool event",
+    "runtime_drain": "record separately from answer latency",
+    "speedup": "ratio_of_paired_means",
+    "speedup_baseline": "complete_dependency",
+    "quality_delta_baseline": "sequential",
+    "contract_safety": {
+      "definition": "Appendix B.2 Eq.38",
+      "denominator": "unique logical calls launched before at least one producer completes",
+      "categories": [
+        "argument_mismatch",
+        "duplicate_dispatch",
+        "effect_order",
+        "capacity_overload"
+      ],
+      "primary_category_priority": [
+        "argument_mismatch",
+        "duplicate_dispatch",
+        "effect_order",
+        "capacity_overload"
+      ],
+      "counting": "one primary category per violating early logical call; priority is a reference choice because paper does not specify ties",
+      "aggregate": "sum of four disjoint counts / early logical calls",
+      "zero_denominator": "undefined; serialize null, not 0.0",
+      "incomplete_audit": "serialize rates as null; retain known counts and unassessed count",
+      "report": [
+        "all four raw counts",
+        "aggregate count",
+        "early logical call denominator",
+        "unassessed count",
+        "per-category and aggregate fractions",
+        "task and benchmark cohort IDs"
+      ],
+      "pooling": "sum counts and denominators over identical cohorts; do not average percentages",
+      "paper_number_policy": "never seed 0.0 or 0.63 into computed results; original logs are required to resolve paper inconsistency"
+    },
+    "legacy_violation_incidence": "all detected incidents / all dispatches; separate diagnostic, not Eq.38",
+    "unsafe_dispatch": "number of dispatched calls violating exact data readiness or mandatory effect ordering / all dispatched calls",
+    "early_unsafe_rate": "unsafe early calls / all early-dispatched calls, separate metric",
+    "latency_statistics": [
+      "mean",
+      "median",
+      "p90",
+      "paired_family_bootstrap_95ci"
+    ],
+    "cross_benchmark_aggregation": "macro-average benchmark scores; never pool different native quality metrics without labeling"
+  },
+  "tools": {
+    "registry": [
+      "llm",
+      "retrieve_context"
+    ],
+    "schemas": "examples/compactflow/schemas/workflow.schema.json",
+    "effects": "llm/retrieve_context use their registered contracts; GAIA uses developer-owned network/asset/auxiliary contracts in gaia_contracts.py",
+    "mbpp_sandbox": {
+      "image": "python@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254",
+      "timeout": 10,
+      "network": "none",
+      "memory_mb": 256,
+      "cpus": 1,
+      "pids": 64,
+      "root_filesystem": "read_only",
+      "capabilities": "drop_all",
+      "uid_gid": "65534:65534",
+      "tmpfs_mb": 16
+    },
+    "gaia_capability_gate": "runtime data, attachment, prepared dependency and pinned auxiliary-service checks; no silent task exclusion",
+    "external_api_policy": "record endpoint/version/time and snapshot actual observations; credentials never go into manifest",
+    "request_limits": {
+      "max_inflight": 4,
+      "requests_per_minute": 60,
+      "tokens_per_minute": 100000,
+      "burst": 4
+    },
+    "clock": "time.perf_counter / asyncio loop.time",
+    "network": "loopback model services; GAIA phase-scoped read-only capture; fixed-graph timed replay never accesses network",
+    "gaia": {
+      "enabled": true,
+      "mode": "capture",
+      "asset_root": "/data/Optx/outputs/compactflow/evolution-raw-data-with-gaia/GAIA/2023/validation",
+      "auxiliary_url": "http://127.0.0.1:8020",
+      "models": {
+        "vision": {
+          "repository": "Qwen/Qwen2.5-VL-7B-Instruct",
+          "revision": "cc594898137f460bfe9f0759e9844b3ce807cfb5",
+          "path": "/data/Optx/models/Qwen2.5-VL-7B-Instruct-cc594898",
+          "dtype": "float32",
+          "do_sample": false
+        },
+        "audio": {
+          "repository": "Systran/faster-whisper-large-v3",
+          "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+          "path": "/data/Optx/models/faster-whisper-large-v3-edaa852e",
+          "compute_type": "float32",
+          "beam_size": 5,
+          "temperature": 0,
+          "condition_on_previous_text": false
+        }
+      },
+      "driver_path": "/data/Optx/compactflow-tools/geckodriver",
+      "search_backend": "bing_html",
+      "max_agent_steps": 12,
+      "max_tool_calls": 20,
+      "tool_timeout_seconds": 180,
+      "vision_max_tokens": 1024,
+      "max_asset_bytes": 104857600,
+      "replay_time_scale": 1.0,
+      "registry": [
+        "gaia_agent",
+        "gaia_read_file",
+        "gaia_unpack_zip",
+        "gaia_search",
+        "gaia_browse",
+        "gaia_download",
+        "gaia_vision",
+        "gaia_transcribe",
+        "gaia_video_frames",
+        "gaia_python"
+      ],
+      "browser_binary": "/data/Optx/compactflow-tools/firefox/firefox",
+      "device": "cpu",
+      "cpu_threads": 8,
+      "workflow_contract_version": "gaia_observation_units_v1"
+    }
+  },
+  "artifacts": {
+    "directory": "outputs/compactflow/pilot",
+    "sample_manifest": "sample_manifest.jsonl",
+    "config_lock": "config.lock.json",
+    "environment_lock": "environment.lock.json",
+    "required": [
+      "config.lock.json",
+      "sample_manifest.jsonl",
+      "environment.lock.json",
+      "prompt_hashes.json",
+      "policy_snapshots",
+      "workflow_specs",
+      "model_requests.jsonl",
+      "records.jsonl",
+      "replay_bundles",
+      "traces.jsonl",
+      "summary.json",
+      "tables.csv",
+      "figures"
+    ],
+    "hash": "SHA-256",
+    "redaction": "no secrets, hostnames, user home paths or private endpoint credentials in public manifests",
+    "missing_artifact": "mark run incomplete; no invented results",
+    "source_hashes": {
+      "examples/compactflow/prompts/contract.txt": "8a6da21ef486f8283ab2a54f4869f81d3731be5a497a03c51ba0959d7fc40503",
+      "examples/compactflow/prompts/distill.txt": "3cb6c0a726f0e0e3ea62e1560eaf9445ddb39d443d36ded46b2c5dd50e797b64",
+      "examples/compactflow/prompts/execute.txt": "dd869b485709cc6b85f48ff20419c12b0fd4a320737b272d78ba1f825d42e7ce",
+      "examples/compactflow/prompts/plan.txt": "4637283957684a815f2e8f45c3a1928a75a941677c793be98b265c6710b9a1fd",
+      "examples/compactflow/prompts/query.txt": "90f6575f941a5094f9ec88b45bfaf4f350e0a53fd7cd57338cb6039267959f9b",
+      "examples/compactflow/prompts/select.txt": "1a7e20a7d8f09d9c43df4b56cb52d96d66a43e18fc11c975f769ed26c211cd31",
+      "examples/compactflow/schemas/candidate.schema.json": "d49d3e6a4ab51aa2fea14a856e6b7d0dc62991cc71400bbe5dffab9cbd51bfa0",
+      "examples/compactflow/schemas/workflow.schema.json": "ff4a867308e40ba7a0785ba0dc430ba9c096bd23872a8af809328f6208ebb22d",
+      "examples/compactflow/policies/seed_policies.json": "c3e7c770a7d423ef96a318f79d6b6e2d5ab552a405c069e7c39c661cad560abc"
+    }
+  },
+  "provenance": {
+    "user_requested": [
+      "model family Qwen3-Coder",
+      "execution host A100"
+    ],
+    "paper_defined": [
+      "two-plane architecture",
+      "four benchmarks and quality metrics",
+      "paired held-out verification",
+      "source/validation/target separation",
+      "capacity sweep 1,2,4,8,16",
+      "sink TTFO",
+      "1200/1000 diagnostic workflow totals"
+    ],
+    "model_author_recommended": [
+      "model.top_p",
+      "model.top_k",
+      "model.repetition_penalty",
+      "model.components.executor.temperature"
+    ],
+    "live_verified": [
+      "model.revision",
+      "model.config_sha256",
+      "model.tokenizer_config_sha256",
+      "encoder.revision",
+      "datasets.*.revision",
+      "serving.observed_runtime",
+      "tools.mbpp_sandbox.image",
+      "baselines.*.commit"
+    ],
+    "reference_defaults": "All other numerical settings and allocations are explicit implementation choices, not original paper hyperparameters.",
+    "ambiguity_resolutions": {
+      "retrieval_confidence": "included with weight 0.10, matching Algorithm 3",
+      "near_duplicate": "verify-then-merge",
+      "main_operating_point": "capacity 4, batch 1",
+      "speedup_estimator": "ratio of paired means",
+      "ttfo": "first declared sink output",
+      "effect_safety": "hard constraint, never traded for speed"
+    },
+    "sources": [
+      "https://huggingface.co/Qwen/Qwen3-Coder-30B-A3B-Instruct",
+      "https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2",
+      "https://github.com/pandawei-ele/A2FLOW"
+    ]
+  },
+  "appendix_coverage": {
+    "9": [
+      "model",
+      "serving"
+    ],
+    "10": [
+      "encoder"
+    ],
+    "11": [
+      "datasets"
+    ],
+    "12": [
+      "partition"
+    ],
+    "13": [
+      "evaluation",
+      "study_allocation"
+    ],
+    "14": [
+      "baselines"
+    ],
+    "15": [
+      "tools",
+      "serving"
+    ],
+    "16": [
+      "construction"
+    ],
+    "17": [
+      "construction.library"
+    ],
+    "18": [
+      "construction.planner"
+    ],
+    "19": [
+      "construction.statistics",
+      "construction.distillation"
+    ],
+    "20": [
+      "construction"
+    ],
+    "21": [
+      "execution.stream",
+      "tools.schemas"
+    ],
+    "22": [
+      "execution.effects",
+      "execution.resource_capacity",
+      "execution.resource_demands"
+    ],
+    "23": [
+      "execution"
+    ],
+    "24": [
+      "execution.replay"
+    ],
+    "25": [
+      "metrics"
+    ]
+  },
+  "runner": {
+    "bootstrap_tasks": 2,
+    "rounds": 1,
+    "source_tasks_per_round": 2,
+    "max_candidates_per_task": 1,
+    "max_candidates_per_round": 1,
+    "validation_folds": 1,
+    "heldout_tasks_per_candidate": 3,
+    "heldout_seeds": [
+      101
+    ],
+    "target_seeds": [
+      42
+    ],
+    "source_seed": 42,
+    "resume": true,
+    "raw_bundle_protocol": "sources.json plus checksum-pinned local benchmark files",
+    "target_policy_updates": false,
+    "entrypoint": "examples/compactflow/run_evolution.py",
+    "budgets": "per benchmark",
+    "checkpoint": "checkpoint.json; atomic call and candidate caches; single writer process lock",
+    "manifest": "sample_manifest.jsonl; full task digest plus family/split/fold mapping",
+    "validation_protocol": "one disjoint fold per round per benchmark; all candidates distilled before validation",
+    "output_artifacts": [
+      "config.lock.json",
+      "environment.lock.json",
+      "sample_manifest.jsonl",
+      "policy_snapshots/initial.json",
+      "policy_snapshots/bootstrap.json",
+      "policy_snapshots/round-NN.json",
+      "policy_snapshots/final.json",
+      "source_records.jsonl",
+      "validation_records.jsonl",
+      "target_records.jsonl",
+      "candidate_decisions.jsonl",
+      "coverage.json",
+      "summary.json",
+      "tables.csv",
+      "gaia_assets.lock.json",
+      "gaia_capabilities.json",
+      "auxiliary_models.lock.json",
+      "tool_records.jsonl",
+      "tool_snapshots/"
+    ],
+    "failure_protocol": "execution_accounting_infrastructure_v2"
+  },
+  "baseline_runner": {
+    "entrypoint": "examples/compactflow/run_baselines.py",
+    "manifest": "required frozen evolution sample_manifest.jsonl; no new sampling or splitting",
+    "required_methods": [
+      "aflow",
+      "evoagentx",
+      "base_planner",
+      "expert_policies",
+      "static_library",
+      "compactflow"
+    ],
+    "benchmarks": [
+      "MBPP",
+      "HotpotQA",
+      "MATH",
+      "GAIA"
+    ],
+    "source_budget_ref": "evaluation.benchmark_seed_search_token_budget",
+    "validation_budget": "shared offline cap with search",
+    "target_budget_ref": "evaluation.task_token_budget",
+    "resume": "immutable config, manifest, code, and policy snapshot hashes; task/model-response journals",
+    "failure_policy": "coverage_incomplete",
+    "import_evolution_records": false,
+    "ged_timeout_seconds": 1.0,
+    "output_artifacts": [
+      "baseline.lock.json",
+      "baseline_records.jsonl",
+      "baseline_summary.json",
+      "coverage.json",
+      "summary.json",
+      "tables.csv",
+      "gaia_assets.lock.json",
+      "gaia_capabilities.json",
+      "auxiliary_models.lock.json",
+      "tool_records.jsonl",
+      "tool_snapshots/"
+    ]
+  },
+  "paper_experiments": {
+    "entrypoint": "examples/compactflow/run_paper.py",
+    "native_llmcompiler": true,
+    "pilot_source_only": true,
+    "target_gate": "all variants and construction workflows frozen before any target calls",
+    "selected_studies": [
+      "construction_main",
+      "construction_diagnostic",
+      "construction_ablations",
+      "construction_sensitivity",
+      "execution_main",
+      "execution_ablations",
+      "execution_sensitivity",
+      "library_dynamics",
+      "transfer"
+    ],
+    "reporting_dependency": "matplotlib==3.10.6",
+    "unsafe_ablations": "offline exact replay only",
+    "human_applicability_labels": "optional immutable JSONL import; absence remains incomplete"
+  }
+}

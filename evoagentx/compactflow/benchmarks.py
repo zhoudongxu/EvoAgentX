@@ -33,9 +33,13 @@ class BenchmarkTask:
     def public_input(self) -> dict:
         # Gold answers, reference code, hidden tests and supporting-fact labels
         # never enter the planner/executor context.
-        return {"benchmark": self.benchmark, "task_id": self.task_id,
-                "question": self.question, "context": self.context,
-                "attachments": self.attachments}
+        value = {"benchmark": self.benchmark, "task_id": self.task_id,
+                 "question": self.question, "context": self.context,
+                 "attachments": self.attachments}
+        if self.benchmark == "GAIA":
+            from .gaia import public_gaia_assets
+            value.update(assets=public_gaia_assets(self), split=self.split)
+        return value
 
 
 def normalize_qa(value: str) -> str:
@@ -164,8 +168,7 @@ def validate_partitions(tasks: list[BenchmarkTask]) -> None:
             raise ValueError("invalid experiment split")
         if not task.family_id:
             raise ValueError("explicit task family required")
-        keys = ["family:" + task.family_id, "prompt:" + digest(normalize_qa(task.question))]
-        keys += ["leak:" + str(k) for k in task.metadata.get("leakage_keys", [])]
+        keys = _partition_keys(task)
         for group in keys:
             key = (task.benchmark, group)
             if key in groups and groups[key] != task.split:
@@ -236,10 +239,154 @@ def import_dataset(name: str, rows: list[dict], *, revision: str, original_split
                                    attachments=[row["file_name"]] if row.get("file_name") else [],
                                    metadata={"dataset_revision": revision, "original_split": original_split,
                                              "family_method": "provided" if row.get("family_id") else "normalized_numeric_template_v1",
-                                             "leakage_keys": row.get("leakage_keys", [])}))
+                                              "leakage_keys": row.get("leakage_keys", [])}))
+        if name == "GAIA":
+            tasks[-1].metadata["level"] = int(row.get("Level", row.get("level", 0)))
     return tasks
 
 
 def write_tasks(path: str | Path, tasks: list[BenchmarkTask]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text("".join(canonical(asdict(t)) + "\n" for t in tasks))
+
+
+def _partition_keys(task: BenchmarkTask) -> tuple[str, ...]:
+    """Return deterministic keys that must remain in one partition."""
+    return tuple(dict.fromkeys((
+        "family:" + str(task.family_id),
+        "prompt:" + digest(normalize_qa(task.question)),
+        "template:" + digest(re.sub(r"\d+(?:\.\d+)?", "NUM", normalize_qa(task.question))),
+        *("leak:" + str(value) for value in task.metadata.get("leakage_keys", ())),
+    )))
+
+
+def _group_tasks(tasks: list[BenchmarkTask]) -> list[list[BenchmarkTask]]:
+    """Union tasks sharing a family, normalized prompt, or leakage key."""
+    parent = list(range(len(tasks)))
+
+    def find(index: int) -> int:
+        while parent[index] != index:
+            parent[index] = parent[parent[index]]
+            index = parent[index]
+        return index
+
+    seen: dict[tuple[str, str], int] = {}
+    for index, task in enumerate(tasks):
+        for key in _partition_keys(task):
+            scoped = (task.benchmark, key)
+            if scoped in seen:
+                left, right = find(index), find(seen[scoped])
+                if left != right:
+                    parent[left] = right
+            seen[scoped] = index
+    groups: dict[int, list[BenchmarkTask]] = collections.defaultdict(list)
+    for index, task in enumerate(tasks):
+        groups[find(index)].append(task)
+    return sorted(
+        (sorted(group, key=lambda item: item.task_id) for group in groups.values()),
+        key=lambda group: tuple(item.task_id for item in group),
+    )
+
+
+def _exact_group_subset(groups: list[list[BenchmarkTask]], target: int, *, salt: str) -> set[int]:
+    """Find a deterministic whole-group subset with exactly target tasks."""
+    ordered = sorted(
+        enumerate(groups),
+        key=lambda item: digest([salt, [task.task_id for task in item[1]]]),
+    )
+    reachable: dict[int, tuple[int, ...]] = {0: ()}
+    for position, (_, group) in enumerate(ordered):
+        size = len(group)
+        for total, chosen in sorted(tuple(reachable.items()), reverse=True):
+            new_total = total + size
+            if new_total <= target and new_total not in reachable:
+                reachable[new_total] = chosen + (position,)
+    if target not in reachable:
+        raise ValueError(f"cannot form an exact whole-family partition of {target} tasks")
+    selected_positions = set(reachable[target])
+    return {ordered[position][0] for position in selected_positions}
+
+
+def _allocate_groups(groups, counts, *, seed):
+    """Exact multi-bin packing; backtrack across splits instead of greedy subsets."""
+    from functools import lru_cache
+
+    ordered = sorted(groups, key=lambda group: (
+        -len(group), digest([seed, group[0].benchmark, sorted(t.task_id for t in group)])))
+    sizes = [len(group) for group in ordered]
+
+    @lru_cache(None)
+    def place(index, remaining):
+        if index == len(ordered):
+            return () if not any(remaining) else None
+        # Once only singletons remain, every remaining capacity is attainable.
+        if sizes[index] == 1:
+            if sum(remaining) != len(ordered) - index:
+                return None
+            return tuple(bin_id for bin_id, size in enumerate(remaining) for _ in range(size))
+        tried = set()
+        for bin_id, capacity in enumerate(remaining):
+            if capacity < sizes[index] or capacity in tried:
+                continue
+            tried.add(capacity)
+            rest = list(remaining)
+            rest[bin_id] -= sizes[index]
+            solution = place(index + 1, tuple(rest))
+            if solution is not None:
+                return (bin_id,) + solution
+        return None
+
+    assignment = place(0, tuple(counts))
+    if assignment is None:
+        raise ValueError(f"cannot form exact whole-family partitions with counts {counts}")
+    return list(zip(ordered, assignment))
+
+
+def assign_exact_partitions(
+    tasks: list[BenchmarkTask], *, seed: int, source_count: int = 90,
+    validation_count: int = 30, target_count: int = 30,
+    validation_folds: int | None = None,
+) -> list[BenchmarkTask]:
+    """Exact per-benchmark partitions, optionally packing validation folds jointly."""
+    counts = [source_count, target_count, validation_count]
+    if any(n <= 0 for n in counts):
+        raise ValueError("partition counts must be positive")
+    if validation_folds is not None:
+        if validation_folds < 1 or validation_count % validation_folds:
+            raise ValueError("validation count must divide evenly across folds")
+        counts = [source_count, target_count] + [validation_count // validation_folds] * validation_folds
+    for benchmark in sorted({t.benchmark for t in tasks}):
+        cohort = [t for t in tasks if t.benchmark == benchmark]
+        if len(cohort) != sum(counts):
+            raise ValueError(f"{benchmark}: pool size must equal the requested partition counts")
+        assignment = _allocate_groups(_group_tasks(cohort), counts, seed=seed)
+        for group, bin_id in assignment:
+            for task in group:
+                task.split = "source" if bin_id == 0 else "target" if bin_id == 1 else "validation"
+                task.metadata.update(
+                    partition_seed=seed, partition_group_size=len(group),
+                    partition_group_id=digest([benchmark, sorted(t.task_id for t in group)]),
+                    partition_keys=list(_partition_keys(task)),
+                )
+                task.metadata.pop("validation_fold", None)
+                if task.split == "validation" and validation_folds is not None:
+                    task.metadata["validation_fold"] = bin_id - 1
+    validate_partitions(tasks)
+    return tasks
+
+
+def assign_validation_folds(
+    tasks: list[BenchmarkTask], *, rounds: int = 5, seed: int = 42
+) -> list[BenchmarkTask]:
+    """Whole-family folds of equal size within EACH benchmark."""
+    if rounds < 1:
+        raise ValueError("rounds must be positive")
+    for benchmark in sorted({t.benchmark for t in tasks}):
+        validation = [t for t in tasks if t.benchmark == benchmark and t.split == "validation"]
+        if not validation or len(validation) % rounds:
+            raise ValueError(f"{benchmark}: validation count must divide evenly across folds")
+        counts = [len(validation) // rounds] * rounds
+        for group, bin_id in _allocate_groups(_group_tasks(validation), counts, seed=seed):
+            for task in group:
+                task.metadata["validation_fold"] = bin_id + 1
+    return tasks

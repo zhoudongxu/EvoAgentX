@@ -1,0 +1,11 @@
+# Install in a new Python 3.11 environment, independently of primary vLLM.
+torch==2.6.0
+torchvision==0.21.0
+transformers==4.57.6
+accelerate==1.13.0
+faster-whisper==1.2.1
+ctranslate2==4.6.0
+qwen-vl-utils==0.0.14
+fastapi
+uvicorn
+pillow

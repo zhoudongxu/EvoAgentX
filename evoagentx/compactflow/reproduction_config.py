@@ -93,6 +93,16 @@ def validate_reproduction_config(config: dict, *, root: Path | None = None) -> d
     require(c["admission_order"] == "verify_then_merge" and c["library"]["target_frozen"], "admission and target-freeze invariants required")
     require(c["heldout_tasks_per_candidate"] <= partition["nominal_counts_per_benchmark"]["validation"], "heldout sample exceeds validation partition")
     require(c["library"]["bootstrap_tasks"] + c["distillation"]["rounds"] * c["distillation"]["source_tasks_per_round"] <= partition["nominal_counts_per_benchmark"]["source"], "source task budget exceeded")
+    if "runner" in config:
+        from .evolution import EvolutionConfig
+        runner = EvolutionConfig.from_mapping(config)
+        require(runner.validation_folds * runner.validation_tasks_per_candidate == partition["nominal_counts_per_benchmark"]["validation"],
+                "validation folds must cover the complete per-benchmark validation pool")
+        require(runner.bootstrap_tasks + runner.rounds * runner.source_tasks_per_round <= partition["nominal_counts_per_benchmark"]["source"],
+                "runner source budget exceeded")
+        require(config["runner"].get("target_policy_updates") is False, "target policy updates must be disabled")
+        require(runner.rounds == c["distillation"]["rounds"] and runner.validation_folds == c["validation_folds"]
+                and runner.validation_tasks_per_candidate == c["heldout_tasks_per_candidate"], "runner/construction fold settings disagree")
     evaluation, execution = config["evaluation"], config["execution"]
     for name in ("generation_seeds", "runtime_seeds"):
         seeds = evaluation[name]
@@ -121,6 +131,41 @@ def validate_reproduction_config(config: dict, *, root: Path | None = None) -> d
         require(d["unique_generated_workflows"] * d["scheduler_methods"] * d["timed_repetitions"] == d["timed_replays"], "replay count mismatch")
         d = studies["construction_main"]
         require(d["benchmarks"] * d["target_tasks_per_benchmark"] * len(d["generation_seeds"]) * len(d["requested_methods"]) == d["requested_unique_generated_workflows"], "main construction count mismatch")
+    if "baseline_runner" in config:
+        b=config["baselines"]; shared=b["shared"]
+        require(shared["runtime"]=="complete_dependency", "construction baselines require common complete runtime")
+        gaia = config.get("tools",{}).get("gaia",{})
+        if gaia:
+            from urllib.parse import urlparse
+            require(gaia.get("enabled") is True, "GAIA profile requires explicit tool enablement")
+            require(gaia.get("mode") in {"capture","replay"}, "invalid GAIA observation mode")
+            require(gaia.get("max_agent_steps")==12 and gaia.get("max_tool_calls")==20, "GAIA task tool budgets differ from protocol")
+            auxiliary_device = gaia.get("device", "cuda")
+            require(auxiliary_device in {"cpu", "cuda"}, "invalid GAIA auxiliary device")
+            if auxiliary_device == "cpu":
+                require(gaia.get("gpu") is None, "CPU auxiliary profile must not select a GPU")
+                require(gaia.get("models",{}).get("vision",{}).get("dtype")=="float32" and gaia.get("models",{}).get("audio",{}).get("compute_type")=="float32", "CPU auxiliary profile requires float32 models")
+            else:
+                require(gaia.get("gpu")==0, "GAIA auxiliary models require authorized GPU 0")
+            require(type(gaia.get("cpu_threads",4)) is int and 1 <= gaia.get("cpu_threads",4) <= 32, "invalid auxiliary CPU thread bound")
+            require(urlparse(gaia.get("auxiliary_url","")).hostname=="127.0.0.1", "GAIA service must bind loopback")
+            for model in gaia.get("models",{}).values():
+                require(re.fullmatch(r"[a-f0-9]{40}",model.get("revision","")) is not None, "auxiliary model revision must be immutable")
+            require(set(gaia.get("models",{}))=={"vision","audio"}, "GAIA vision/audio configuration missing")
+        require(shared["task_total_token_budget"]==evaluation["task_token_budget"], "baseline task budget differs")
+        require(shared["max_nodes"]==c["planner"]["max_nodes"]==12, "baseline node bound differs")
+        require(shared["heldout_seeds"]==c["heldout_seeds"], "baseline validation seed aliases differ")
+        require(shared["heldout_tasks_per_candidate"]==partition["nominal_counts_per_benchmark"]["validation"], "construction selection requires the frozen validation pool")
+        for method in ("aflow","evoagentx"):
+            require(b[method]["integration_status"]=="runtime_probe" and b[method].get("adapter_path") and b[method].get("canonical_exporter"), "native baseline adapter unresolved")
+            if method != "a2flow":
+                require(b[method]["validation_rounds"]==len(c["heldout_seeds"]), "baseline validation rounds differ from seed count")
+        if "a2flow" in b and b["a2flow"].get("integration_status") == "runtime_probe":
+            require(b["a2flow"].get("adapter_path") and b["a2flow"].get("canonical_exporter"), "A2Flow adapter metadata missing")
+        require(b["aflow"]["test_rounds"]==len(evaluation["generation_seeds"]), "AFlow target rounds differ from paired generation seeds")
+        require(b["aflow"]["candidates_per_round"]==b["evoagentx"]["candidates_per_iteration"]==1, "one candidate per search step required")
+        if config["profile"]=="reference":
+            require(b["aflow"]["max_rounds"]==b["evoagentx"]["max_iterations"]==20 and b["aflow"]["population_sample"]==4, "reference construction search budget changed")
     if root is not None:
         required_artifacts = {c["distillation"][k] for k in ("prompt", "schema")}
         required_artifacts.update(c["planner"][k] for k in ("prompt", "output_schema"))

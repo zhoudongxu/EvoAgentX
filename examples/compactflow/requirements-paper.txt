@@ -1,0 +1,2 @@
+# Plot generation for run_paper report; install explicitly before a run.
+matplotlib==3.10.6

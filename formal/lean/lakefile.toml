@@ -1,0 +1,9 @@
+name = "compactflow_formal"
+version = "0.1.0"
+defaultTargets = ["CompactFlow"]
+
+[[lean_lib]]
+name = "CompactFlow"
+
+[[lean_lib]]
+name = "Examples"

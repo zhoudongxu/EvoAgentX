@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/SqueezeAILab/LLMCompiler",
+  "revision": "a00c9d35507507da70e8c637eee64efc8c1857ae",
+  "path": "src/llm_compiler/task_fetching_unit.py",
+  "sha256_original": "b4d11813149564d327b021006b725d21abe0a63557deb3314328852d461e094f",
+  "sha256_vendored": "46785390b44892ea4d0b50d51c90859b94096d87ec0d27cebb546365b2c066d4",
+  "license": "MIT",
+  "modifications": [
+    "Replace optional global print logger with local no-op. Task and TaskFetchingUnit scheduling methods are unchanged."
+  ],
+  "scope": "Fixed-workflow execution-plane baseline; planner and joiner are intentionally not invoked."
+}

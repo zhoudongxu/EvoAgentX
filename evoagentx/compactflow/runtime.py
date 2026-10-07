@@ -8,11 +8,14 @@ dispatch guarantee for each logical call.
 """
 
 from __future__ import annotations
+from contextlib import aclosing, nullcontext
 
 import asyncio
 import copy
 import inspect
 import math
+import time
+from functools import wraps
 from collections.abc import Mapping
 from typing import Any
 
@@ -40,6 +43,39 @@ from .schema import (
 )
 
 _MISSING = object()
+CONTROL_PROFILE_VERSION = "exclusive_v1"
+
+
+class _ControlProfiler:
+    """Exclusive wall time for synchronous work on one scheduler instance.
+
+    A parent excludes every profiled child's inclusive duration, including
+    same-category children and exceptional returns. These wrappers never span
+    awaits, model execution, or time spent waiting for the scheduler lock.
+    """
+
+    def __init__(self, totals, *, clock=None):
+        self.totals = totals
+        self.clock = clock or time.perf_counter
+        self.stack = []
+
+    def wrap(self, operation, category):
+        @wraps(operation)
+        def measured(*args, **kwargs):
+            frame = [self.clock(), 0.0]
+            self.stack.append(frame)
+            try:
+                return operation(*args, **kwargs)
+            finally:
+                elapsed = self.clock() - frame[0]
+                self.stack.pop()
+                self.totals[category] = (
+                    self.totals.get(category, 0.0) + elapsed - frame[1]
+                )
+                if self.stack:
+                    self.stack[-1][1] += elapsed
+
+        return measured
 
 
 class StreamContractError(RuntimeError):
@@ -254,6 +290,7 @@ class CompactFlowRuntime:
         call_timeout: float | None = None,
         workflow_timeout: float | None = None,
         percentage_threshold: float = 0.5,
+        profile_controls: bool = False,
     ) -> None:
         if not isinstance(graph, GFRG):
             raise TypeError("graph must be a compiled GFRG")
@@ -274,6 +311,7 @@ class CompactFlowRuntime:
         self.call_timeout = call_timeout
         self.workflow_timeout = workflow_timeout
         self.percentage_threshold = percentage_threshold
+        self.profile_controls = profile_controls
         if resource_capacity is None:
             self.resource_capacity = graph.resource_capacity
         elif isinstance(resource_capacity, ResourceVector):
@@ -309,6 +347,22 @@ class CompactFlowRuntime:
             call_timeout=self.call_timeout,
             percentage_threshold=self.percentage_threshold,
         )
+        if self.profile_controls:
+            execution.metrics.control_profile_version = CONTROL_PROFILE_VERSION
+            execution.metrics.control_seconds = dict.fromkeys(
+                ("guard", "dispatch", "materialization"), 0.0
+            )
+            profiler = _ControlProfiler(execution.metrics.control_seconds)
+            for method, category in {
+                "_refresh_and_dispatch_locked": "dispatch",
+                "_dispatch_locked": "dispatch",
+                "_semantically_ready": "guard",
+                "_effect_ready": "guard",
+                "_resources_available": "guard",
+                "_handle_partial_locked": "materialization",
+                "_handle_complete_locked": "materialization",
+            }.items():
+                setattr(execution, method, profiler.wrap(getattr(execution, method), category))
         return await asyncio.wait_for(execution.run(), self.workflow_timeout)
 
     async def run(
@@ -466,33 +520,37 @@ class _Execution:
 
     async def _refresh_and_dispatch(self) -> None:
         async with self.lock:
-            self._propagate_failed_ancestors_locked()
-            for call_id in self.order:
-                if (
-                    self.states[call_id] is CallState.WAITING
-                    and self._semantically_ready(call_id)
-                ):
-                    ready_at = self._record(TraceKind.READY, call_id)
-                    self.states[call_id] = CallState.READY
-                    self.traces[call_id].state = CallState.READY
-                    self.traces[call_id].ready_at = ready_at
+            self._refresh_and_dispatch_locked()
 
-            if self.mode is ExecutionMode.SEQUENTIAL and any(
-                state is CallState.RUNNING for state in self.states.values()
+    def _refresh_and_dispatch_locked(self) -> None:
+        """Synchronous readiness/queue work; caller holds the scheduler lock."""
+        self._propagate_failed_ancestors_locked()
+        for call_id in self.order:
+            if (
+                self.states[call_id] is CallState.WAITING
+                and self._semantically_ready(call_id)
             ):
-                return
+                ready_at = self._record(TraceKind.READY, call_id)
+                self.states[call_id] = CallState.READY
+                self.traces[call_id].state = CallState.READY
+                self.traces[call_id].ready_at = ready_at
 
-            for call_id in sorted(self.order, key=lambda cid: (
-                self.traces[cid].ready_at if self.traces[cid].ready_at is not None else math.inf,
-                self.order.index(cid),
-            )):
-                if self.states[call_id] is not CallState.READY:
-                    continue
-                if not self._resources_available(call_id):
-                    continue
-                self._dispatch_locked(call_id)
-                if self.mode is ExecutionMode.SEQUENTIAL:
-                    break
+        if self.mode is ExecutionMode.SEQUENTIAL and any(
+            state is CallState.RUNNING for state in self.states.values()
+        ):
+            return
+
+        for call_id in sorted(self.order, key=lambda cid: (
+            self.traces[cid].ready_at if self.traces[cid].ready_at is not None else math.inf,
+            self.order.index(cid),
+        )):
+            if self.states[call_id] is not CallState.READY:
+                continue
+            if not self._resources_available(call_id):
+                continue
+            self._dispatch_locked(call_id)
+            if self.mode is ExecutionMode.SEQUENTIAL:
+                break
 
     def _semantically_ready(self, call_id: str) -> bool:
         if self.mode is ExecutionMode.INDEPENDENT and any(
@@ -699,7 +757,7 @@ class _Execution:
     ) -> None:
         try:
             await asyncio.wait_for(self._invoke_impl(call, arguments), self.call_timeout)
-        except TimeoutError:
+        except asyncio.TimeoutError:
             await self.queue.put(Failure(error=f"call timeout: {call.id}", call_id=call.id))
 
     async def _invoke_impl(
@@ -718,14 +776,15 @@ class _Execution:
             if inspect.isawaitable(result):
                 result = await result
             if hasattr(result, "__aiter__"):
-                async for raw_event in result:
-                    event = self._normalize_event(call, raw_event)
-                    if isinstance(event, (Partial, Complete)):
-                        local_output = _deep_merge(local_output, event.data)
-                    await self.queue.put(event)
-                    if isinstance(event, (Complete, Failure)):
-                        terminal_sent = True
-                        break
+                async with aclosing(result) if hasattr(result, "aclose") else nullcontext():
+                    async for raw_event in result:
+                        event = self._normalize_event(call, raw_event)
+                        if isinstance(event, (Partial, Complete)):
+                            local_output = _deep_merge(local_output, event.data)
+                        await self.queue.put(event)
+                        if isinstance(event, (Complete, Failure)):
+                            terminal_sent = True
+                            break
                 if not terminal_sent:
                     await self.queue.put(
                         Complete(data=local_output, call_id=call.id)
@@ -924,7 +983,12 @@ class _Execution:
                 self.observed_effects.add((call_id, effect))
                 self.effect_times[(call_id, effect)] = observed_at
             self.states[call_id] = CallState.COMPLETED
-            if all(self.states[sink] is CallState.COMPLETED for sink in self.sink_ids):
+            # Latch the first valid sink completion. A still-running producer
+            # may finish its unused output fields after the answer is ready.
+            # Later failure still invalidates this timestamp below.
+            if self.metrics.output_ready_at is None and all(
+                self.states[sink] is CallState.COMPLETED for sink in self.sink_ids
+            ):
                 self.metrics.output_ready_at = observed_at
             call_trace = self.traces[call_id]
             call_trace.state = CallState.COMPLETED

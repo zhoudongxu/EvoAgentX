@@ -6,6 +6,17 @@ EvoAgentX dependency graph.  Native integration classes are available from
 """
 
 from .compiler import GFRGCompiler, compile_gfrg
+from .baselines import (
+    AFlowAdapter,
+    BaselineAdapter,
+    BaselineRecord,
+    BaselineUnavailable,
+    ConstructionBaselineRunner,
+    EvoAgentXAdapter,
+    FrozenBenchmarkView,
+    WorkflowCandidate,
+)
+from .evolution import DistillationResult, EvolutionConfig, EvolutionResult, EvolutionRunner, VariantResult, run_evolution
 from .construction import (
     AdmissionConfig,
     ConstructionConfig,
@@ -56,6 +67,17 @@ from .schema import (
 )
 
 __all__ = [
+    "AFlowAdapter",
+    "BaselineAdapter",
+    "BaselineRecord",
+    "BaselineUnavailable",
+    "ConstructionBaselineRunner",
+    "DistillationResult",
+    "EvolutionConfig",
+    "EvolutionResult",
+    "EvolutionRunner",
+    "VariantResult",
+    "run_evolution",
     "GFRG",
     "AdmissionConfig",
     "AdmissionVerdict",
@@ -71,11 +93,13 @@ __all__ = [
     "DataDependency",
     "DeterministicTextEmbedder",
     "EffectDependency",
+    "EvoAgentXAdapter",
     "Evidence",
     "ExecutionFeedback",
     "ExecutionMode",
     "ExecutionResult",
     "Failure",
+    "FrozenBenchmarkView",
     "GFRGCompiler",
     "GuardedRuntime",
     "PairedExecution",
@@ -93,6 +117,7 @@ __all__ = [
     "SelectionConfig",
     "StreamContract",
     "StreamContractError",
+    "WorkflowCandidate",
     "compile_gfrg",
     "execute_gfrg",
     "pair_evidence",
